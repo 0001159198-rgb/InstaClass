@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Usuario;    
+use App\Models\User as Usuario;    // 📦 CORREÇÃO: Apelidando o modelo User padrão do Laravel como Usuario
 use App\Models\Publicacao; 
 use App\Models\Denuncia;   
 
