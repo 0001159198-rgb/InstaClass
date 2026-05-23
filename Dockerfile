@@ -1,13 +1,13 @@
 FROM php:8.3-apache
 
 RUN apt-get update && apt-get install -y \
-git \
-curl \
-zip \
-unzip \
-libpq-dev \
-libzip-dev \
-&& docker-php-ext-install pdo_pgsql zip
+    git \
+    curl \
+    zip \
+    unzip \
+    libpq-dev \
+    libzip-dev \
+    && docker-php-ext-install pdo_pgsql zip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -41,5 +41,5 @@ COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-# MUDANÇA AQUI: Garante o mapa de classes atualizado antes de subir
-CMD composer dump-autoload --optimize && php artisan migrate --force && apache2-foreground
+# 🎯 CORREÇÃO NO CMD: Alterado para 'migrate:fresh' para garantir a criação limpa das tabelas no Apache
+CMD composer dump-autoload --optimize && php artisan migrate:fresh --force && apache2-foreground

@@ -3,20 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ControladorCliente;
 use App\Http\Controllers\ControladorAdmin;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Artisan;
-
-// =========================================================================
-// INICIALIZADOR AUTOMÁTICO DO BANCO DE DADOS (Solução para SQLite no Render)
-// =========================================================================
-try {
-    // Tenta verificar se a tabela de usuários já existe no banco
-    DB::table('usuarios')->exists();
-} catch (\Exception $e) {
-    // Se der erro (tabela não existe), o Laravel roda as migrações na hora
-    Artisan::call('migrate', ['--force' => true]);
-}
-// =========================================================================
 
 // Autenticação
 Route::get('/login', [ControladorCliente::class, 'showLogin']);
