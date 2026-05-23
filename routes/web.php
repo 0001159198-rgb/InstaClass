@@ -21,4 +21,17 @@ Route::prefix('admin')->group(function () {
     Route::get('/', [ControladorAdmin::class, 'dashboard']);
     Route::get('/usuarios', [ControladorAdmin::class, 'listarUsuarios']);
     Route::get('/denuncias', [ControladorAdmin::class, 'listarDenuncias']);
+    
+    Route::get('/publicacoes', [ControladorAdmin::class, 'listarPublicacoes']);
+    Route::get('/publicacoes/{id}', [ControladorAdmin::class, 'verPublicacao']);
+    Route::post('/publicacoes/{id}/aprovar', [ControladorAdmin::class, 'aprovarPublicacao']);
+    Route::post('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao']);
+    Route::post('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao']);
+});
+
+// 🌟 ROTA DE SEED REMOVIDA DO GRUPO ADMIN (Livre de bloqueios inicial)
+Route::get('/rodar-seed-temporario', function() {
+    $seeder = new \Database\Seeders\DatabaseSeeder();
+    $seeder->run();
+    return "<br><br>🏁 Processo finalizado.";
 });
