@@ -1,107 +1,70 @@
 <?php
 
-class ControladorCliente {
+namespace App\Http\Controllers;
 
-    // ================== MÉTODOS AUXILIARES (PROTEÇÃO E SESSÃO) ==================
+use Illuminate\Http\Request;
+use App\Models\Publicacao; // Altere para o namespace real do seu Model se for diferente
+use App\Models\Usuario;    // Altere para o namespace real do seu Model se for diferente
+use App\Models\Curtida;    // Altere para o namespace real do seu Model se for diferente
+use App\Models\Denuncia;   // Altere para o namespace real do seu Model se for diferente
 
-    /**
-     * Garante que a sessão foi iniciada de forma limpa.
-     */
-    private function iniciarSessao() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-    }
-
-    /**
-     * Exige que o usuário esteja logado. Se não estiver, manda para o login.
-     * Retorna o ID do usuário logado.
-     */
-    private function exigirAutenticacao() {
-        $this->iniciarSessao();
-        $usuario_id = $_SESSION['usuario_id'] ?? null;
-        
-        if (!$usuario_id) {
-            header('Location: ' . BASE_URL . '/login');
-            exit;
-        }
-        return $usuario_id;
-    }
-
-    /**
-     * Executa um redirecionamento seguro priorizando a página anterior (Referer).
-     */
-    private function redirecionarParaAnterior() {
-        $redirect = $_SERVER['HTTP_REFERER'] ?? BASE_URL . '/feed';
-        header("Location: " . $redirect);
-        exit;
-    }
+class ControladorCliente extends Controller {
 
     // ================== PÁGINA INICIAL ==================
 
     public function welcome() {
-        $this->iniciarSessao();
-        
-        if (isset($_SESSION['usuario_id'])) {
-            if ($_SESSION['usuario_tipo'] == 'admin') {
-                header('Location: ' . BASE_URL . '/admin');
-            } else {
-                header('Location: ' . BASE_URL . '/feed');
+        // Se o usuário já estiver logado na sessão do Laravel
+        if (auth()->check()) {
+            if (auth()->user()->tipo === 'admin') {
+                return redirect()->to('/admin');
             }
-            exit;
+            return redirect()->to('/feed');
         }
         
-        require __DIR__ . '/../../views/welcome.php';
+        // Renderiza resources/views/welcome.blade.php ou welcome.php
+        return view('welcome');
     }
 
     // ================== FEED E PUBLICAÇÕES ==================
 
     public function inicio() {
-        $this->feed();
+        return $this->feed();
     }
 
     public function feed() {
         $publicacoes = Publicacao::aprovadas();
-        require __DIR__ . '/../../views/cliente/feed.php';
+        return view('cliente.feed', compact('publicacoes'));
     }
 
     public function criarPublicacao() {
-        $this->exigirAutenticacao();
-        require __DIR__ . '/../../views/cliente/criar.php';
+        return view('cliente.criar');
     }
 
-    public function salvarPublicacao() {
-        $usuario_id = $this->exigirAutenticacao();
+    public function salvarPublicacao(Request $request) {
+        $usuario_id = auth()->id(); // Pega o ID do usuário logado no Laravel
 
-        $legenda = trim($_POST['legenda'] ?? '');
-        $url_imagem = trim($_POST['url_imagem'] ?? '');
+        $legenda = trim($request->input('legenda', ''));
+        $url_imagem = trim($request->input('url_imagem', ''));
 
         if (empty($legenda)) {
-            $_SESSION['erro'] = "Legenda obrigatória!";
-            header('Location: ' . BASE_URL . '/publicacoes/criar');
-            exit;
+            return redirect()->to('/publicacoes/criar')->with('erro', 'Legenda obrigatória!');
         }
 
         $resultado = Publicacao::criar($usuario_id, $legenda, $url_imagem);
         
         if ($resultado) {
-            $_SESSION['mensagem'] = "✅ Publicação criada com sucesso!";
-            header('Location: ' . BASE_URL . '/perfil/' . $usuario_id);
-        } else {
-            $_SESSION['erro'] = "❌ Erro ao criar publicação!";
-            header('Location: ' . BASE_URL . '/publicacoes/criar');
+            return redirect()->to('/perfil/' . $usuario_id)->with('mensagem', '✅ Publicação criada com sucesso!');
         }
-        exit;
+        
+        return redirect()->to('/publicacoes/criar')->with('erro', '❌ Erro ao criar publicação!');
     }
 
-    public function listarPublicacoesUsuario($id) {
+    public function listarPublicacoesUsuario($id = null) {
         if (empty($id) || $id == 0) {
-            $this->iniciarSessao();
-            $id = $_SESSION['usuario_id'] ?? null;
+            $id = auth()->id();
             
             if (!$id) {
-                header('Location: ' . BASE_URL . '/login');
-                exit;
+                return redirect()->to('/login');
             }
         }
         
@@ -109,81 +72,68 @@ class ControladorCliente {
         $usuario = Usuario::buscarPorId($id);
         
         if (!$usuario) {
-            http_response_code(404);
-            echo "<h1>404 - Usuário não encontrado</h1>";
-            exit;
+            abort(404, 'Usuário não encontrado');
         }
         
-        require __DIR__ . '/../../views/cliente/perfil.php';
+        return view('cliente.perfil', compact('publicacoes', 'usuario'));
     }
 
-    public function buscarPublicacoes() {
-        $termo = $_GET['q'] ?? '';
+    public function buscarPublicacoes(Request $request) {
+        $termo = $request->input('q', '');
         $publicacoes = empty($termo) ? [] : Publicacao::buscar($termo);
         
-        require __DIR__ . '/../../views/cliente/busca.php';
+        return view('cliente.busca', compact('publicacoes'));
     }
 
     public function curtirPublicacao($id) {
-        $usuario_id = $this->exigirAutenticacao();
+        $usuario_id = auth()->id();
         Curtida::toggleCurtida($usuario_id, $id);
-        $this->redirecionarParaAnterior();
+        
+        return redirect()->back(); // Redireciona de volta com segurança
     }
 
     public function minhasCurtidas() {
-        $usuario_id = $this->exigirAutenticacao();
+        $usuario_id = auth()->id();
         
         $publicacoes = Curtida::getPublicacoesCurtidas($usuario_id);
         $totalCurtidas = Curtida::countCurtidas($usuario_id);
         
-        require __DIR__ . '/../../views/cliente/curtidas.php';
+        return view('cliente.curtidas', compact('publicacoes', 'totalCurtidas'));
     }
 
     public function descurtirPublicacao($id) {
-        $usuario_id = $this->exigirAutenticacao();
+        $usuario_id = auth()->id();
         Curtida::descurtir($usuario_id, $id);
-        $this->redirecionarParaAnterior();
+        
+        return redirect()->back();
     }
 
-    public function denunciarPublicacao($id) {
-        $this->exigirAutenticacao();
-
-        $motivo = $_POST['motivo'] ?? 'Conteúdo impróprio';
-        $gravidade = $_POST['gravidade'] ?? 'media';
+    public function denunciarPublicacao(Request $request, $id) {
+        $motivo = $request->input('motivo', 'Conteúdo impróprio');
+        $gravidade = $request->input('gravidade', 'media');
 
         $resultado = Denuncia::criar($id, $motivo, $gravidade);
         
         if ($resultado) {
-            $_SESSION['mensagem'] = "✅ Denúncia enviada com sucesso!";
-        } else {
-            $_SESSION['erro'] = "❌ Você já denunciou esta publicação.";
+            return redirect()->back()->with('mensagem', '✅ Denúncia enviada com sucesso!');
         }
         
-        $this->redirecionarParaAnterior();
+        return redirect()->back()->with('erro', '❌ Você já denunciou esta publicação.');
     }
 
     // ================== MÉTODOS DE AUTENTICAÇÃO ==================
 
     public function showLogin() {
-        $loginView = __DIR__ . '/../../views/auth/login.php';
-        
-        if (file_exists($loginView)) {
-            require_once $loginView;
-        } else {
-            echo "Erro: Arquivo de login não encontrado em: " . $loginView;
-        }
+        return view('auth.login');
     }
 
-    public function login() {
-        $this->iniciarSessao();
-        
-        $email = $_POST['email'] ?? '';
-        $senha = $_POST['senha'] ?? '';
-        $tipoSelecionado = $_POST['tipo'] ?? 'cliente';
+    public function login(Request $request) {
+        $email = $request->input('email', '');
+        $senha = $request->input('senha', '');
+        $tipoSelecionado = $request->input('tipo', 'cliente');
         
         if (empty($email) || empty($senha)) {
-            header('Location: ' . BASE_URL . '/login?erro=1');
-            exit;
+            return redirect()->to('/login?erro=1');
         }
         
         $usuario = Usuario::buscarPorEmail($email);
@@ -191,69 +141,59 @@ class ControladorCliente {
         if ($usuario && password_verify($senha, $usuario['senha'])) {
             
             if ($tipoSelecionado == 'admin' && $usuario['tipo'] != 'admin') {
-                header('Location: ' . BASE_URL . '/login?erro=2&tipo=admin');
-                exit;
+                return redirect()->to('/login?erro=2&tipo=admin');
             }
             
-            $_SESSION['usuario_id'] = $usuario['id'];
-            $_SESSION['usuario_nome'] = $usuario['nome'];
-            $_SESSION['usuario_email'] = $usuario['email'];
-            $_SESSION['usuario_tipo'] = $usuario['tipo'];
+            // Força o login do usuário na sessão nativa do Laravel
+            auth()->loginUsingId($usuario['id']);
+            
+            // Salva dados adicionais se as suas views antigas dependerem deles
+            session([
+                'usuario_id' => $usuario['id'],
+                'usuario_nome' => $usuario['nome'],
+                'usuario_email' => $usuario['email'],
+                'usuario_tipo' => $usuario['tipo']
+            ]);
             
             if ($tipoSelecionado == 'cliente' && $usuario['tipo'] == 'admin') {
-                header('Location: ' . BASE_URL . '/admin');
-                exit;
+                return redirect()->to('/admin');
             }
             
-            if ($usuario['tipo'] == 'admin') {
-                header('Location: ' . BASE_URL . '/admin');
-            } else {
-                header('Location: ' . BASE_URL . '/feed');
-            }
-        } else {
-            header('Location: ' . BASE_URL . '/login?erro=2&tipo=' . $tipoSelecionado);
+            return ($usuario['tipo'] == 'admin') ? redirect()->to('/admin') : redirect()->to('/feed');
         }
-        exit;
+        
+        return redirect()->to('/login?erro=2&tipo=' . $tipoSelecionado);
     }
 
     public function logout() {
-        $this->iniciarSessao();
-        session_destroy();
-        header('Location: ' . BASE_URL . '/');
-        exit;
+        auth()->logout();
+        session()->flush(); // Limpa as variáveis de sessão
+        
+        return redirect()->to('/');
     }
 
     public function showRegistro() {
-        $registroView = __DIR__ . '/../../views/auth/registro.php';
-        
-        if (file_exists($registroView)) {
-            require_once $registroView;
-        } else {
-            echo "Erro: Arquivo de registro não encontrado em: " . $registroView;
-        }
+        return view('auth.registro');
     }
 
-    public function registrar() {
-        $nome = $_POST['nome'] ?? '';
-        $nome_usuario = $_POST['nome_usuario'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $senha = $_POST['senha'] ?? '';
-        $cadastrarComoAdmin = isset($_POST['cadastrar_como_admin']) && $_POST['cadastrar_como_admin'] == '1';
-        $codigoAdmin = $_POST['codigo_admin'] ?? '';
+    public function registrar(Request $request) {
+        $nome = $request->input('nome', '');
+        $nome_usuario = $request->input('nome_usuario', '');
+        $email = $request->input('email', '');
+        $senha = $request->input('senha', '');
+        $cadastrarComoAdmin = $request->has('cadastrar_como_admin') && $request->input('cadastrar_como_admin') == '1';
+        $codigoAdmin = $request->input('codigo_admin', '');
         
         if (empty($nome) || empty($nome_usuario) || empty($email) || empty($senha)) {
-            header('Location: ' . BASE_URL . '/registrar?erro=1');
-            exit;
+            return redirect()->to('/registrar?erro=1');
         }
         
         if (Usuario::emailExiste($email)) {
-            header('Location: ' . BASE_URL . '/registrar?erro=2');
-            exit;
+            return redirect()->to('/registrar?erro=2');
         }
         
         if (Usuario::nomeUsuarioExiste($nome_usuario)) {
-            header('Location: ' . BASE_URL . '/registrar?erro=4');
-            exit;
+            return redirect()->to('/registrar?erro=4');
         }
         
         $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
@@ -262,8 +202,7 @@ class ControladorCliente {
         if ($cadastrarComoAdmin) {
             $codigoSeguranca = 'ADMIN123';
             if ($codigoAdmin !== $codigoSeguranca) {
-                header('Location: ' . BASE_URL . '/registrar?erro=5');
-                exit;
+                return redirect()->to('/registrar?erro=5');
             }
             $tipo = 'admin';
         } else {
@@ -275,10 +214,9 @@ class ControladorCliente {
         $sucesso = Usuario::criar($nome, $nome_usuario, $email, $senhaHash, $tipo);
         
         if ($sucesso) {
-            header('Location: ' . BASE_URL . '/login?sucesso=1');
-        } else {
-            header('Location: ' . BASE_URL . '/registrar?erro=3');
+            return redirect()->to('/login?sucesso=1');
         }
-        exit;
+        
+        return redirect()->to('/registrar?erro=3');
     }
 }
