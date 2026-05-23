@@ -29,7 +29,6 @@ Route::prefix('admin')->group(function () {
     Route::post('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao']);
 });
 
-// 🌟 ROTA DE SEED REMOVIDA DO GRUPO ADMIN (Livre de bloqueios inicial)
 Route::get('/rodar-seed-temporario', function() {
     $seeder = new \Database\Seeders\DatabaseSeeder();
     $seeder->run();

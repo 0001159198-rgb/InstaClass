@@ -1,44 +1,37 @@
-# 1. Define a imagem base oficial do PHP 8.3 com o servidor Apache integrado
 FROM php:8.3-apache
 
-# 2. Atualiza os pacotes do sistema e instala as ferramentas necessárias
+# Instalar dependências do sistema e extensões PHP para PostgreSQL
 RUN apt-get update && apt-get install -y \
     git \
-    curl \
-    zip \
     unzip \
+    curl \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libzip-dev \
+    zip \
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip
 
-# 3. Instala e ativa as extensões PDO do PHP para conectar ao PostgreSQL (pdo_pgsql)
-RUN docker-php-ext-install pdo pdo_pgsql
-
-# Adiciona o Composer para dentro do container
+# Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 4. Define a pasta de trabalho onde o projeto vai rodar dentro do servidor Linux
+# Copiar projeto Laravel para dentro do container
+COPY . /var/www/html
+
+# Diretório de trabalho
 WORKDIR /var/www/html
 
-# 5. Copia absolutamente todos os arquivos do seu projeto atual para dentro do container
-COPY . .
+# --- ALTERAÇÃO AQUI: Adicionado --no-scripts ---
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Roda a instalação das dependências do Laravel em modo produção
-RUN composer install --no-dev --optimize-autoloader
+# Permissões para as pastas de escrita
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 6. Dá permissão para o Apache ler e gravar os arquivos corretamente (evita erros de acesso)
-RUN chown -R www-data:www-data /var/www/html
-
-RUN chmod -R 775 /var/www/html/storage
-RUN chmod -R 775 /var/www/html/bootstrap/cache
-
-# 7. Ativa o módulo 'rewrite' do Apache (essencial para que as suas rotas e o .htaccess funcionem)
+# Habilitar mod_rewrite do Apache
 RUN a2enmod rewrite
 
-# 8. Substitui a configuração padrão do Apache pela sua configuração personalizada (da pasta .docker)
-COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
+# Apontar Apache para /public
+RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
 
-# 9. Informa ao Render que o container vai escutar e receber tráfego na porta padrão 80
 EXPOSE 80
 
-# 10. Comando padrão para iniciar o servidor Apache em segundo plano
-CMD ["apache2-foreground"]
+# No comando final, o container já terá as variáveis de ambiente, então os scripts funcionam
+CMD php artisan package:discover --ansi && php artisan migrate --force && apache2-foreground
