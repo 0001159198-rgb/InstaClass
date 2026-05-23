@@ -32,6 +32,9 @@ RUN php artisan view:clear
 # CRIA O BANCO DE DADOS EM ARQUIVO GRATUITO AQUI:
 RUN touch /tmp/database.sqlite && chmod 777 /tmp/database.sqlite
 
+# 🎯 CORREÇÃO DE PERMISSÃO: Garante que o Apache (www-data) possa ler e ESCREVER na pasta temporária do banco
+RUN chown -R www-data:www-data /tmp && chmod -R 777 /tmp
+
 RUN chown -R www-data:www-data /var/www/html/storage
 RUN chown -R www-data:www-data /var/www/html/bootstrap/cache
 
@@ -41,5 +44,5 @@ COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-# 🎯 O SEGREDO AQUI: O comando 'migrate:fresh --force' reconstrói as tabelas toda vez que o Render liga a máquina
+# Garante o mapa de classes atualizado antes de subir e recria o banco limpo
 CMD composer dump-autoload --optimize && php artisan migrate:fresh --force && apache2-foreground
