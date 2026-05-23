@@ -1,6 +1,6 @@
 FROM php:8.3-apache
 
-# Dependências
+# Dependências do sistema
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -16,6 +16,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+# Copia projeto
 COPY . .
 
 # Instala dependências
@@ -26,20 +27,15 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
-# ✅ SQLite no lugar correto (IMPORTANTE)
-RUN mkdir -p /var/www/html/storage \
-    && touch /var/www/html/storage/database.sqlite \
-    && chown www-data:www-data /var/www/html/storage/database.sqlite \
-    && chmod 664 /var/www/html/storage/database.sqlite
-
 # Apache rewrite
 RUN a2enmod rewrite
 
+# Config Apache (se você usa vhost customizado)
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-# ❌ SEM migrate:fresh (isso quebrava seu banco)
-CMD php artisan config:clear \
-    && php artisan migrate --force \
-    && apache2-foreground
+# =========================
+# 🚀 CMD FINAL (AQUI ESTÁ A CORREÇÃO)
+# =========================
+CMD bash -c "touch /tmp/database.sqlite && chmod 666 /tmp/database.sqlite && php artisan config:clear && php artisan migrate --force && apache2-foreground"
