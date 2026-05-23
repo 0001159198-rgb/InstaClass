@@ -41,5 +41,5 @@ COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-# 🎯 CORREÇÃO NO CMD: Alterado para 'migrate:fresh' para garantir a criação limpa das tabelas no Apache
+# 🎯 O SEGREDO AQUI: O comando 'migrate:fresh --force' reconstrói as tabelas toda vez que o Render liga a máquina
 CMD composer dump-autoload --optimize && php artisan migrate:fresh --force && apache2-foreground
