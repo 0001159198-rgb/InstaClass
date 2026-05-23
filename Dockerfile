@@ -41,4 +41,5 @@ COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-CMD php artisan migrate --force && apache2-foreground
+# MUDANÇA AQUI: Garante o mapa de classes atualizado antes de subir
+CMD composer dump-autoload --optimize && php artisan migrate --force && apache2-foreground
