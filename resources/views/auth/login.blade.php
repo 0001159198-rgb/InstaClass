@@ -212,7 +212,7 @@
         {{-- Mensagem de Sucesso pós-registro no padrão Laravel --}}
         @if (session('sucesso'))
             <div class="alert alert-success">
-                自由 Cadastro realizado com sucesso! Faça login.
+                ✨ Cadastro realizado com sucesso! Faça login.
             </div>
         @endif
         
@@ -248,7 +248,7 @@
         </div>
         
         <div class="admin-info">
-            <p>🔐 Credenciais de teste:</p>
+            <p>🔐 Credenciais sugeridas:</p>
             <p id="credenciaisInfo">👤 Cliente: cliente@email.com / 123456</p>
         </div>
     </div>
@@ -260,16 +260,13 @@
         const senhaInput = document.getElementById('senha');
         const credenciaisInfo = document.getElementById('credenciaisInfo');
         
+        // CORREÇÃO: Atualiza apenas o texto de ajuda no rodapé sem travar os campos de texto
         function atualizarCredenciais() {
             if (tipoAdmin.checked) {
-                emailInput.value = 'admin@instaclass.com';
-                senhaInput.value = '123456';
-                credenciaisInfo.innerHTML = '👑 Admin: admin@instaclass.com / 123456';
+                credenciaisInfo.innerHTML = '👑 Admin sugerido: admin@instaclass.com / 123456';
                 credenciaisInfo.style.color = '#667eea';
             } else {
-                emailInput.value = 'cliente@email.com';
-                senhaInput.value = '123456';
-                credenciaisInfo.innerHTML = '👤 Cliente: cliente@email.com / 123456';
+                credenciaisInfo.innerHTML = '👤 Cliente sugerido: cliente@email.com / 123456';
                 credenciaisInfo.style.color = '#999';
             }
         }
@@ -295,7 +292,7 @@
             updateSelectedStyle();
         });
         
-        // Inicializar com os valores corretos
+        // Inicializar os estilos corretos no load da página
         atualizarCredenciais();
         updateSelectedStyle();
         

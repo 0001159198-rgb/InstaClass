@@ -204,7 +204,7 @@
         @endif
         
         <form method="POST" action="{{ url('/cadastrar') }}">
-            @csrf
+            @csrf {{-- Token de proteção obrigatório do Laravel --}}
             
             <div class="form-group">
                 <label>👤 Nome completo</label>
@@ -223,7 +223,7 @@
             
             <div class="form-group">
                 <label>🔒 Senha</label>
-                <input type="password" name="senha" placeholder="Crie uma senha" required>
+                <input type="password" name="senha" placeholder="Crie uma senha" minlength="6" required>
                 <div class="password-requirements">Mínimo de 6 caracteres</div>
             </div>
             
@@ -240,7 +240,7 @@
             <div class="form-group" id="codigoAdminGroup" style="display: {{ old('cadastrar_como_admin') ? 'block' : 'none' }};">
                 <label>🔐 Código de Administrador</label>
                 <input type="password" name="codigo_admin" id="codigoAdmin" placeholder="Digite o código de segurança">
-                <div class="password-requirements">Código: ADMIN123</div>
+                <div class="password-requirements">Código padrão: ADMIN123</div>
             </div>
             
             <button type="submit">Criar conta</button>
@@ -255,17 +255,26 @@
         const adminCheckbox = document.getElementById('adminCheckbox');
         const codigoAdminGroup = document.getElementById('codigoAdminGroup');
         const adminOption = document.getElementById('adminOption');
+        const codigoAdminInput = document.getElementById('codigoAdmin');
         
+        // CORREÇÃO: Altera dinamicamente a obrigatoriedade do input de código
         adminCheckbox.addEventListener('change', function() {
             if (this.checked) {
                 codigoAdminGroup.style.display = 'block';
                 adminOption.classList.add('warning');
+                codigoAdminInput.setAttribute('required', 'required'); // Torna obrigatório no HTML
             } else {
                 codigoAdminGroup.style.display = 'none';
                 adminOption.classList.remove('warning');
-                document.getElementById('codigoAdmin').value = '';
+                codigoAdminInput.removeAttribute('required'); // Remove exigência
+                codigoAdminInput.value = ''; // Limpa o campo
             }
         });
+
+        // Executar uma vez no carregamento para preservar dados caso o Laravel retorne com erro (old)
+        if (adminCheckbox.checked) {
+            codigoAdminInput.setAttribute('required', 'required');
+        }
     </script>
 </body>
 </html>
