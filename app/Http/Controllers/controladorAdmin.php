@@ -4,29 +4,28 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Usuario;    // Ajuste o namespace para seus Models reais
-use App\Models\Publicacao; // Ajuste o namespace para seus Models reais
-use App\Models\Denuncia;   // Ajuste o namespace para seus Models reais
+use App\Models\Usuario;    
+use App\Models\Publicacao; 
+use App\Models\Denuncia;   
 
 class ControladorAdmin extends Controller {
 
     /**
-     * Construtor do Controlador.
-     * Define que apenas usuários logados do tipo 'admin' podem acessar estes métodos.
-     * Isso substitui a função manual 'verificarAdmin()' usando a proteção nativa do Laravel.
+     * Função auxiliar privada para validar se o usuário é Administrador.
+     * Evita o erro de encadeamento de middleware do construtor no Laravel 11.
      */
-    public function __construct() {
-        $this->middleware(function ($request, $next) {
-            if (!auth()->check() || auth()->user()->tipo !== 'admin') {
-                return redirect()->to('/login')->send();
-            }
-            return $next($request);
-        });
+    private function checarAdmin() {
+        if (!auth()->check() || auth()->user()->tipo !== 'admin') {
+            redirect()->to('/login')->send();
+            exit();
+        }
     }
 
     // ================== DASHBOARD ==================
 
     public function dashboard() {
+        $this->checarAdmin(); // Garante a proteção da rota
+
         // Buscar dados para os indicadores
         $totalUsuarios = Usuario::total();
         $totalPublicacoes = count(Publicacao::todas());
@@ -48,16 +47,19 @@ class ControladorAdmin extends Controller {
     // ================== LISTAGENS ==================
 
     public function listarUsuarios() {
+        $this->checarAdmin();
         $usuarios = Usuario::todos();
         return view('admin.usuarios', compact('usuarios'));
     }
 
     public function listarPublicacoes() {
+        $this->checarAdmin();
         $publicacoes = Publicacao::todas();
         return view('admin.publicacoes', compact('publicacoes'));
     }
 
     public function listarDenuncias() {
+        $this->checarAdmin();
         $denuncias = Denuncia::all();
         return view('admin.denuncias', compact('denuncias'));
     }
@@ -65,6 +67,7 @@ class ControladorAdmin extends Controller {
     // ================== AÇÕES SOBRE AS PUBLICAÇÕES ==================
 
     public function verPublicacao($id) {
+        $this->checarAdmin();
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
@@ -78,14 +81,13 @@ class ControladorAdmin extends Controller {
     }
 
     public function aprovarPublicacao($id) {
+        $this->checarAdmin();
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
-            // Substituição do Database::connect() pelo Query Builder do Laravel
             DB::table('publicacoes')->where('id', $id)->update(['status' => 'aprovado']);
-            
             return redirect()->to('/admin/publicacoes')->with('mensagem', "✅ Publicação #$id aprovada com sucesso!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao aprovar publicação: ' . $e->getMessage());
@@ -93,6 +95,7 @@ class ControladorAdmin extends Controller {
     }
 
     public function determinarStatus($id, $status, $mensagemSucesso) {
+        $this->checarAdmin();
         try {
             DB::table('publicacoes')->where('id', $id)->update(['status' => $status]);
             session()->flash('mensagem', $mensagemSucesso);
@@ -102,13 +105,13 @@ class ControladorAdmin extends Controller {
     }
 
     public function bloquearPublicacao($id) {
+        $this->checarAdmin();
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
             DB::table('publicacoes')->where('id', $id)->update(['status' => 'bloqueado']);
-            
             return redirect()->to('/admin/publicacoes')->with('mensagem', "🚫 Publicação #$id bloqueada com sucesso!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao bloquear publicação: ' . $e->getMessage());
@@ -116,20 +119,15 @@ class ControladorAdmin extends Controller {
     }
 
     public function excluirPublicacao($id) {
+        $this->checarAdmin();
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
-            // Gerencia a exclusão em lote de forma limpa usando o DB do Laravel
             DB::transaction(function () use ($id) {
-                // Primeiro, excluir as curtidas relacionadas
                 DB::table('curtidas')->where('publicacao_id', $id)->delete();
-                
-                // Depois, excluir as denúncias relacionadas
                 DB::table('denuncias')->where('publicacao_id', $id)->delete();
-                
-                // Por fim, excluir a publicação
                 DB::table('publicacoes')->where('id', $id)->delete();
             });
             

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Publicacao; // Altere para o namespace real do seu Model se for diferente
-use App\Models\Usuario;    // Altere para o namespace real do seu Model se for diferente
-use App\Models\Curtida;    // Altere para o namespace real do seu Model se for diferente
-use App\Models\Denuncia;   // Altere para o namespace real do seu Model se for diferente
+use App\Models\Publicacao; 
+use App\Models\Usuario;    
+use App\Models\Curtida;    
+use App\Models\Denuncia;   
 
 class ControladorCliente extends Controller {
 
