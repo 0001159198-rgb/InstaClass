@@ -28,6 +28,9 @@ RUN composer install --no-dev --optimize-autoloader
 # 6. Dá permissão para o Apache ler e gravar os arquivos corretamente (evita erros de acesso)
 RUN chown -R www-data:www-data /var/www/html
 
+RUN chmod -R 775 /var/www/html/storage
+RUN chmod -R 775 /var/www/html/bootstrap/cache
+
 # 7. Ativa o módulo 'rewrite' do Apache (essencial para que as suas rotas e o .htaccess funcionem)
 RUN a2enmod rewrite
 
