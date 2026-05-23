@@ -1,6 +1,3 @@
-<?php
-$baseUrl = BASE_URL;
-?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -151,7 +148,6 @@ $baseUrl = BASE_URL;
             margin-bottom: 10px;
         }
 
-        /* Estilo para o select de tipo */
         .tipo-usuario {
             display: flex;
             gap: 15px;
@@ -206,34 +202,37 @@ $baseUrl = BASE_URL;
         <h1>InstaClass</h1>
         <div class="subtitle">Faça login para continuar</div>
         
-        <?php if (isset($_GET['erro']) && $_GET['erro'] == 2): ?>
+        {{-- Tratamento de Erros de Login no padrão Laravel --}}
+        @if (session('erro') || $errors->has('email'))
             <div class="alert alert-error">
                 ❌ Email ou senha inválidos!
             </div>
-        <?php endif; ?>
+        @endif
         
-        <?php if (isset($_GET['sucesso'])): ?>
+        {{-- Mensagem de Sucesso pós-registro no padrão Laravel --}}
+        @if (session('sucesso'))
             <div class="alert alert-success">
-                ✅ Cadastro realizado com sucesso! Faça login.
+                自由 Cadastro realizado com sucesso! Faça login.
             </div>
-        <?php endif; ?>
+        @endif
         
-        <form method="post" action="<?= $baseUrl ?>/logar" id="loginForm">
-            <!-- Tipo de usuário - Admin ou Cliente -->
+        <form method="POST" action="{{ url('/logar') }}" id="loginForm">
+            @csrf {{-- Token de proteção obrigatório do Laravel --}}
+            
             <div class="tipo-usuario">
-                <div class="tipo-opcao <?= (!isset($_GET['tipo']) || $_GET['tipo'] != 'admin') ? 'selected' : '' ?>" data-tipo="cliente">
-                    <input type="radio" name="tipo" value="cliente" id="tipoCliente" <?= (!isset($_GET['tipo']) || $_GET['tipo'] != 'admin') ? 'checked' : '' ?>>
+                <div class="tipo-opcao selected" data-tipo="cliente">
+                    <input type="radio" name="tipo" value="cliente" id="tipoCliente" checked>
                     <label for="tipoCliente">👤 Cliente</label>
                 </div>
-                <div class="tipo-opcao <?= (isset($_GET['tipo']) && $_GET['tipo'] == 'admin') ? 'selected' : '' ?>" data-tipo="admin">
-                    <input type="radio" name="tipo" value="admin" id="tipoAdmin" <?= (isset($_GET['tipo']) && $_GET['tipo'] == 'admin') ? 'checked' : '' ?>>
+                <div class="tipo-opcao" data-tipo="admin">
+                    <input type="radio" name="tipo" value="admin" id="tipoAdmin">
                     <label for="tipoAdmin">👑 Administrador</label>
                 </div>
             </div>
             
             <div class="form-group">
                 <label>📧 Email</label>
-                <input type="email" name="email" id="email" placeholder="Digite seu email" required autofocus>
+                <input type="email" name="email" id="email" placeholder="Digite seu email" value="{{ old('email') }}" required autofocus>
             </div>
             
             <div class="form-group">
@@ -245,7 +244,7 @@ $baseUrl = BASE_URL;
         </form>
         
         <div class="register-link">
-            <a href="<?= $baseUrl ?>/registrar">📝 Não tem conta? Cadastre-se</a>
+            <a href="{{ url('/registrar') }}">📝 Não tem conta? Cadastre-se</a>
         </div>
         
         <div class="admin-info">
@@ -255,14 +254,12 @@ $baseUrl = BASE_URL;
     </div>
 
     <script>
-        // Mudar credenciais ao selecionar tipo
         const tipoCliente = document.getElementById('tipoCliente');
         const tipoAdmin = document.getElementById('tipoAdmin');
         const emailInput = document.getElementById('email');
         const senhaInput = document.getElementById('senha');
         const credenciaisInfo = document.getElementById('credenciaisInfo');
         
-        // Função para atualizar as credenciais
         function atualizarCredenciais() {
             if (tipoAdmin.checked) {
                 emailInput.value = 'admin@instaclass.com';
@@ -277,7 +274,6 @@ $baseUrl = BASE_URL;
             }
         }
         
-        // Eventos para mudar o estilo visual
         function updateSelectedStyle() {
             document.querySelectorAll('.tipo-opcao').forEach(opt => {
                 opt.classList.remove('selected');
@@ -299,11 +295,10 @@ $baseUrl = BASE_URL;
             updateSelectedStyle();
         });
         
-        // Inicializar
+        // Inicializar com os valores corretos
         atualizarCredenciais();
         updateSelectedStyle();
         
-        // Prevenir envio se email/senha estiverem vazios
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             if (!emailInput.value || !senhaInput.value) {
                 e.preventDefault();

@@ -1,28 +1,28 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+@include('layouts.header')
 
 <div class="admin-container">
     <div class="card">
         <div class="card-header">
-            <h2>📷 Detalhes da Publicação #<?= $publicacao['id'] ?></h2>
-            <a href="<?= BASE_URL ?>/admin/publicacoes" class="btn-voltar">← Voltar</a>
+            <h2>📷 Detalhes da Publicação #{{ $publicacao['id'] }}</h2>
+            <a href="{{ url('/admin/publicacoes') }}" class="btn-voltar">← Voltar</a>
         </div>
         
         <div class="card-body">
             <div class="info-group">
                 <label>Autor:</label>
-                <p><strong><?= htmlspecialchars($publicacao['autor_nome'] ?? 'Usuário') ?></strong> (@<?= htmlspecialchars($publicacao['nome_usuario'] ?? 'usuario') ?>)</p>
+                <p><strong>{{ $publicacao['autor_nome'] ?? 'Usuário' }}</strong> (@{{ $publicacao['nome_usuario'] ?? 'usuario' }})</p>
             </div>
             
             <div class="info-group">
                 <label>Data:</label>
-                <p><?= date('d/m/Y H:i:s', strtotime($publicacao['criado_em'])) ?></p>
+                <p>{{ date('d/m/Y H:i:s', strtotime($publicacao['criado_em'])) }}</p>
             </div>
             
             <div class="info-group">
                 <label>Status:</label>
                 <p>
-                    <span class="status status-<?= $publicacao['status'] ?>">
-                        <?= ucfirst($publicacao['status']) ?>
+                    <span class="status status-{{ $publicacao['status'] }}">
+                        {{ ucfirst($publicacao['status']) }}
                     </span>
                 </p>
             </div>
@@ -30,38 +30,52 @@
             <div class="info-group">
                 <label>Legenda:</label>
                 <div class="legenda-box">
-                    <?= nl2br(htmlspecialchars($publicacao['legenda'])) ?>
+                    {{-- Renderiza quebras de linha com segurança XSS no Laravel --}}
+                    {!! nl2br(e($publicacao['legenda'])) !!}
                 </div>
             </div>
             
-            <?php if (!empty($publicacao['url_imagem'])): ?>
+            @if (!empty($publicacao['url_imagem']))
                 <div class="info-group">
                     <label>Imagem:</label>
                     <div class="imagem-box">
-                        <img src="<?= htmlspecialchars($publicacao['url_imagem']) ?>" class="imagem-detalhe">
+                        <img src="{{ $publicacao['url_imagem'] }}" class="imagem-detalhe">
                     </div>
                 </div>
-            <?php endif; ?>
+            @endif
             
             <div class="info-group">
                 <label>Curtidas:</label>
-                <p>❤️ <?= $publicacao['total_curtidas'] ?? 0 ?> curtidas</p>
+                <p>❤️ {{ $publicacao['total_curtidas'] ?? 0 }} curtidas</p>
             </div>
             
             <div class="acoes">
-                <?php if ($publicacao['status'] != 'aprovado'): ?>
-                    <a href="<?= BASE_URL ?>/admin/publicacoes/<?= $publicacao['id'] ?>/aprovar" class="btn-aprovar">✅ Aprovar</a>
-                <?php endif; ?>
-                <?php if ($publicacao['status'] != 'bloqueado'): ?>
-                    <a href="<?= BASE_URL ?>/admin/publicacoes/<?= $publicacao['id'] ?>/bloquear" class="btn-bloquear">🚫 Bloquear</a>
-                <?php endif; ?>
-                <a href="<?= BASE_URL ?>/admin/publicacoes/<?= $publicacao['id'] ?>/excluir" class="btn-excluir" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
+                {{-- Modificado para botões de formulário POST para bater com suas rotas protegidas --}}
+                @if ($publicacao['status'] != 'aprovado')
+                    <form action="{{ url('/admin/publicacoes/' . $publicacao['id'] . '/aprovar') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn-aprovar">✅ Aprovar</button>
+                    </form>
+                @endif
+                
+                @if ($publicacao['status'] != 'bloqueado')
+                    <form action="{{ url('/admin/publicacoes/' . $publicacao['id'] . '/bloquear') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn-bloquear">🚫 Bloquear</button>
+                    </form>
+                @endif
+                
+                <form action="{{ url('/admin/publicacoes/' . $publicacao['id'] . '/excluir') }}" method="POST" onclick="return confirm('Tem certeza?')">
+                    @csrf
+                    <button type="submit" class="btn-excluir">🗑️ Excluir</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
 <style>
+/* Seu CSS original com ajustes finos nos seletores de botões */
 .admin-container {
     max-width: 800px;
     margin: 40px auto;
@@ -134,6 +148,7 @@
 .status-aprovado { background: #d4edda; color: #155724; }
 .status-pendente { background: #fff3cd; color: #856404; }
 .status-bloqueado { background: #f8d7da; color: #721c24; }
+
 .acoes {
     display: flex;
     gap: 10px;
@@ -141,16 +156,21 @@
     padding-top: 20px;
     border-top: 1px solid #efefef;
 }
-.acoes a {
+.acoes button {
     padding: 10px 20px;
+    border: none;
     border-radius: 6px;
-    text-decoration: none;
     font-weight: 500;
     font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.acoes button:hover {
+    opacity: 0.85;
 }
 .btn-aprovar { background: #28a745; color: white; }
 .btn-bloquear { background: #ffc107; color: #333; }
 .btn-excluir { background: #dc3545; color: white; }
 </style>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+@include('layouts.footer')

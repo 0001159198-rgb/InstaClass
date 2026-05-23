@@ -1,24 +1,19 @@
-<?php 
-include __DIR__ . '/../layouts/header.php'; 
+@include('layouts.header')
 
-?>
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
-<!-- Mensagens flash -->
-<?php if (isset($_SESSION['mensagem'])): ?>
+@if (session('mensagem'))
     <div class="mensagem-flash">
-        <?= $_SESSION['mensagem'] ?>
-        <?php unset($_SESSION['mensagem']); ?>
+        {{ session('mensagem') }}
     </div>
-<?php endif; ?>
+@endif
 
-<?php if (isset($_SESSION['erro'])): ?>
+@if (session('erro'))
     <div class="erro-flash">
-        <?= $_SESSION['erro'] ?>
-        <?php unset($_SESSION['erro']); ?>
+        {{ session('erro') }}
     </div>
-<?php endif; ?>
+@endif
 
-<!-- MODAL DE DENÚNCIA -->
 <div id="modalDenuncia" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -26,6 +21,7 @@ include __DIR__ . '/../layouts/header.php';
             <span class="close-modal">&times;</span>
         </div>
         <form id="formDenuncia" method="POST">
+            @csrf {{-- Proteção obrigatória contra ataques CSRF --}}
             <input type="hidden" name="publicacao_id" id="publicacao_id">
             <p>Selecione o motivo da denúncia:</p>
             <div class="motivo-option" data-motivo="Conteúdo impróprio">📝 Conteúdo impróprio</div>
@@ -50,42 +46,49 @@ include __DIR__ . '/../layouts/header.php';
                 <h2>🏠 Feed</h2>
             </header>
             <section class="feed">
-                <?php if (empty($publicacoes)): ?>
+                @if (empty($publicacoes) || count($publicacoes) === 0)
                     <div class="empty-state">
                         <p>📭 Nenhuma publicação encontrada.</p>
-                        <a href="<?= BASE_URL ?>/publicacoes/criar" class="btn-criar">➕ Criar primeira publicação</a>
+                        <a href="{{ url('/publicacoes/criar') }}" class="btn-criar">➕ Criar primeira publicação</a>
                     </div>
-                <?php else: ?>
-                    <?php foreach ($publicacoes as $pub): ?>
+                @else
+                    @foreach ($publicacoes as $pub)
+                        @php 
+                            // Cast preventivo para garantir compatibilidade com arrays ou objetos do banco
+                            $pub = (array) $pub; 
+                        @endphp
                         <div class="post">
                             <div class="post-header">
                                 <div class="post-avatar">
-                                    <?= strtoupper(substr($pub['autor_nome'] ?? 'U', 0, 1)) ?>
+                                    {{ strtoupper(substr($pub['autor_nome'] ?? 'U', 0, 1)) }}
                                 </div>
                                 <div class="post-info">
-                                    <a href="<?= BASE_URL ?>/perfil/<?= $pub['usuario_id'] ?>" class="post-nome">
-                                        <?= htmlspecialchars($pub['autor_nome'] ?? 'Usuário') ?>
+                                    <a href="{{ url('/perfil/' . $pub['usuario_id']) }}" class="post-nome">
+                                        {{ $pub['autor_nome'] ?? 'Usuário' }}
                                     </a>
                                     <div class="post-data">
-                                        <?= date('d/m/Y \à\s H:i', strtotime($pub['criado_em'] ?? 'now')) ?>
+                                        {{ date('d/m/Y \à\s H:i', strtotime($pub['criado_em'] ?? 'now')) }}
                                     </div>
                                 </div>
                             </div>
-                            <p class="post-legenda"><?= nl2br(htmlspecialchars($pub['legenda'])) ?></p>
-                            <?php if (!empty($pub['url_imagem'])): ?>
-                                <img src="<?= htmlspecialchars($pub['url_imagem'])?>" class="post-imagem" onerror="this.src='<?= BASE_URL ?>/public/assets/img/default.jpg'">
-                            <?php endif; ?>
+                            
+                            <p class="post-legenda">{!! nl2br(e($pub['legenda'])) !!}</p>
+                            
+                            @if (!empty($pub['url_imagem']))
+                                <img src="{{ $pub['url_imagem'] }}" class="post-imagem" onerror="this.src='{{ asset('assets/img/default.jpg') }}'">
+                            @endif
+                            
                             <div class="post-acoes">
-                                <a href="<?= BASE_URL ?>/publicacoes/<?= $pub['id'] ?>/curtir" class="btn-curtir">
-                                    ❤️ Curtir (<span><?= $pub['total_curtidas'] ?? 0 ?></span>)
+                                <a href="{{ url('/publicacoes/' . $pub['id'] . '/curtir') }}" class="btn-curtir">
+                                    ❤️ Curtir (<span>{{ $pub['total_curtidas'] ?? 0 }}</span>)
                                 </a>
-                                <button type="button" class="btn-denunciar" onclick="abrirModal(<?= $pub['id'] ?>)">
+                                <button type="button" class="btn-denunciar" onclick="abrirModal({{ $pub['id'] }})">
                                     🚨 Denunciar
                                 </button>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                    @endforeach
+                @endif
             </section>
         </div>
     </main>
@@ -164,7 +167,14 @@ document.getElementById('formDenuncia').addEventListener('submit', function(e) {
     
     var form = document.createElement('form');
     form.method = 'POST';
-    form.action = '<?= BASE_URL ?>/publicacoes/' + publicacaoId + '/denunciar';
+    form.action = "{{ url('/publicacoes') }}/" + publicacaoId + "/denunciar";
+    
+    // Adiciona o Token CSRF do Laravel para o envio de formulário dinâmico ser aceito pelo servidor
+    var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var inputToken = document.createElement('input');
+    inputToken.type = 'hidden';
+    inputToken.name = '_token';
+    inputToken.value = token;
     
     var inputMotivo = document.createElement('input');
     inputMotivo.type = 'hidden';
@@ -176,6 +186,7 @@ document.getElementById('formDenuncia').addEventListener('submit', function(e) {
     inputGravidade.name = 'gravidade';
     inputGravidade.value = 'media';
     
+    form.appendChild(inputToken);
     form.appendChild(inputMotivo);
     form.appendChild(inputGravidade);
     document.body.appendChild(form);
@@ -183,16 +194,23 @@ document.getElementById('formDenuncia').addEventListener('submit', function(e) {
     form.submit();
 });
 
-// ================== CURTIR - SEM CONFIRMAÇÃO ==================
+// ================== CURTIR - ASSÍNCRONO COM TOKEN DE PROTEÇÃO ==================
 document.querySelectorAll('.btn-curtir').forEach(link => {
     link.addEventListener('click', async function(e) {
         e.preventDefault();
         const url = this.href;
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             if (response.ok) {
-                window.location.href = window.location.href;
+                window.location.reload();
             } else {
                 console.error('Erro na resposta:', response.status);
             }
@@ -212,4 +230,4 @@ setTimeout(function() {
 }, 5000);
 </script>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+@include('layouts.footer')

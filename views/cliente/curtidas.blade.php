@@ -1,7 +1,4 @@
-<?php 
-include __DIR__ . '/../layouts/header.php'; 
-// A BASE_URL inteligente já é definida globalmente pelo public/index.php
-?>
+@include('layouts.header')
 
 <style>
     .main-content {
@@ -164,50 +161,54 @@ include __DIR__ . '/../layouts/header.php';
         <p>Publicações que você curtiu</p>
     </div>
 
-    <?php if (empty($publicacoes)): ?>
+    @if (empty($publicacoes) || count($publicacoes) === 0)
         <div class="empty-state">
             <div class="heart">💔</div>
             <p>Você ainda não curtiu nenhuma publicação.</p>
-            <a href="<?= BASE_URL ?>/feed" class="btn-voltar">Explorar publicações</a>
+            <a href="{{ url('/feed') }}" class="btn-voltar">Explorar publicações</a>
         </div>
-    <?php else: ?>
-        <?php foreach ($publicacoes as $pub): ?>
+    @else
+        @foreach ($publicacoes as $pub)
+            @php 
+                // Cast preventivo para garantir leitura correta independente da origem (Array/Objeto)
+                $pub = (array) $pub; 
+            @endphp
             <div class="post">
                 <div class="post-header">
                     <div class="post-avatar">
-                        <?= strtoupper(substr($pub['autor_nome'] ?? 'U', 0, 1)) ?>
+                        {{ strtoupper(substr($pub['autor_nome'] ?? 'U', 0, 1)) }}
                     </div>
                     <div class="post-info">
-                        <a href="<?= BASE_URL ?>/perfil/<?= $pub['usuario_id'] ?>" class="post-nome">
-                            <?= htmlspecialchars($pub['autor_nome'] ?? 'Usuário') ?>
+                        <a href="{{ url('/perfil/' . $pub['usuario_id']) }}" class="post-nome">
+                            {{ $pub['autor_nome'] ?? 'Usuário' }}
                         </a>
                         <div class="post-data">
-                            Curtido em <?= date('d/m/Y \à\s H:i', strtotime($pub['data_curtida'] ?? 'now')) ?>
+                            Curtido em {{ date('d/m/Y \à\s H:i', strtotime($pub['data_curtida'] ?? 'now')) }}
                         </div>
                     </div>
                 </div>
                 
-                <p class="post-legenda"><?= nl2br(htmlspecialchars($pub['legenda'])) ?></p>
+                <p class="post-legenda">{!! nl2br(e($pub['legenda'])) !!}</p>
                 
-                <?php if (!empty($pub['url_imagem'])): ?>
-                    <img src="<?= htmlspecialchars($pub['url_imagem']) ?>" class="post-imagem" alt="Publicação" onerror="this.src='<?= BASE_URL ?>/public/assets/img/default.jpg'">
-                <?php endif; ?>
+                @if (!empty($pub['url_imagem']))
+                    <img src="{{ $pub['url_imagem'] }}" class="post-imagem" alt="Publicação" onerror="this.src='{{ asset('assets/img/default.jpg') }}'">
+                @endif
                 
                 <div class="post-acoes">
-                    <a href="<?= BASE_URL ?>/publicacoes/<?= $pub['id'] ?>/descurtir" class="btn-descurtir">
+                    <a href="{{ url('/publicacoes/' . $pub['id'] . '/descurtir') }}" class="btn-descurtir">
                         💔 Descurtir
                     </a>
-                    <a href="<?= BASE_URL ?>/perfil/<?= $pub['usuario_id'] ?>" class="btn-descurtir">
+                    <a href="{{ url('/perfil/' . $pub['usuario_id']) }}" class="btn-descurtir">
                         👤 Ver perfil
                     </a>
                 </div>
             </div>
-        <?php endforeach; ?>
+        @endforeach
         
         <div class="total-info">
-            Total: <?= $totalCurtidas ?? count($publicacoes) ?> publicação(ões) curtida(s)
+            Total: {{ $totalCurtidas ?? count($publicacoes) }} publicação(ões) curtida(s)
         </div>
-    <?php endif; ?>
+    @endif
 </div>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+@include('layouts.footer')

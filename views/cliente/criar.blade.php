@@ -1,16 +1,10 @@
-<?php 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-// A BASE_URL inteligente já é definida globalmente pelo public/index.php
-?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nova Publicação - InstaClass</title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>/public/css/style.css">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
 </head>
 <body>
     <div class="header">
@@ -19,35 +13,40 @@ if (session_status() === PHP_SESSION_NONE) {
     <div class="container">
         <div class="card">
             
-            <?php if (isset($_SESSION['erro'])): ?>
+            {{-- Mensagem de Erro Gerenciada pelo Laravel --}}
+            @if (session('erro'))
                 <div class="erro-flash">
-                    <?= $_SESSION['erro'] ?>
-                    <?php unset($_SESSION['erro']); ?>
+                    {{ session('erro') }}
                 </div>
-            <?php endif; ?>
+            @endif
             
-            <?php if (isset($_SESSION['mensagem'])): ?>
+            {{-- Mensagem de Sucesso Gerenciada pelo Laravel --}}
+            @if (session('mensagem'))
                 <div class="mensagem-flash">
-                    <?= $_SESSION['mensagem'] ?>
-                    <?php unset($_SESSION['mensagem']); ?>
+                    {{ session('mensagem') }}
                 </div>
-            <?php endif; ?>
+            @endif
             
-            <form method="post" action="<?= BASE_URL ?>/publicacoes/salvar">
+            <form method="POST" action="{{ url('/publicacoes/salvar') }}">
+                @csrf {{-- Proteção obrigatória para envio de formulários POST --}}
+                
                 <div class="form-group">
                     <label>📝 Legenda</label>
-                    <textarea name="legenda" placeholder="O que você está pensando? Use @ para mencionar alguém..." required></textarea>
+                    <textarea name="legenda" placeholder="O que você está pensando? Use @ para mencionar alguém..." required>{{ old('legenda') }}</textarea>
                     <div class="dica">💡 Dica: Use @nome_usuario para mencionar alguém</div>
                 </div>
+                
                 <div class="form-group">
                     <label>🖼️ URL da imagem (opcional)</label>
-                    <input type="url" name="url_imagem" placeholder="https://exemplo.com/imagem.jpg">
+                    <input type="url" name="url_imagem" value="{{ old('url_imagem') }}" placeholder="https://exemplo.com/imagem.jpg">
                     <div class="dica">📷 Cole o link de uma imagem da internet</div>
                 </div>
+                
                 <button type="submit">📤 Publicar</button>
             </form>
+            
             <div class="back">
-                <a href="<?= BASE_URL ?>/feed">← Voltar ao feed</a>
+                <a href="{{ url('/feed') }}">← Voltar ao feed</a>
             </div>
         </div>
     </div>

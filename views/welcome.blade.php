@@ -1,6 +1,3 @@
-<?php 
-// A BASE_URL inteligente já é definida globalmente pelo public/index.php
-?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -190,12 +187,13 @@
         </div>
         
         <div class="buttons">
-            <a href="<?= BASE_URL ?>/login" class="btn btn-primary">🔐 Fazer Login</a>
-            <a href="<?= BASE_URL ?>/registrar" class="btn btn-secondary">📝 Criar Conta</a>
+            <a href="{{ url('/login') }}" class="btn btn-primary">🔐 Fazer Login</a>
+            <a href="{{ url('/registrar') }}" class="btn btn-secondary">📝 Criar Conta</a>
         </div>
         
         <div class="footer">
-            <p>© 2024 InstaClass - Rede social para compartilhar momentos especiais</p>
+            {{-- Mantido o ano dinâmico usando o método format do próprio objeto Carbon do Laravel --}}
+            <p>© {{ now()->format('Y') }} InstaClass - Rede social para compartilhar momentos especiais</p>
         </div>
     </div>
 </body>

@@ -1,6 +1,3 @@
-<?php
-$baseUrl = 'BASE_URL';
-?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -145,7 +142,6 @@ $baseUrl = 'BASE_URL';
             margin-top: 5px;
         }
 
-        /* Estilo para a opção de admin */
         .admin-option {
             background: #f8f9fa;
             padding: 15px;
@@ -190,36 +186,39 @@ $baseUrl = 'BASE_URL';
         <h1>Criar Conta</h1>
         <div class="subtitle">Cadastre-se para começar</div>
         
-        <?php if (isset($_GET['erro'])): ?>
+        {{-- Tratamento dinâmico de erros mapeado para o Laravel --}}
+        @if (session('erro') || $errors->any())
             <div class="alert alert-error">
-                <?php if ($_GET['erro'] == 1): ?>
-                    ❌ Preencha todos os campos!
-                <?php elseif ($_GET['erro'] == 2): ?>
+                @if (session('erro') == 1 || $errors->has('nome') || $errors->has('senha'))
+                    ❌ Preencha todos os campos corretamente!
+                @elseif (session('erro') == 2 || $errors->has('email'))
                     ❌ Email já cadastrado!
-                <?php elseif ($_GET['erro'] == 3): ?>
-                    ❌ Erro ao cadastrar. Tente novamente!
-                <?php elseif ($_GET['erro'] == 4): ?>
+                @elseif (session('erro') == 4 || $errors->has('nome_usuario'))
                     ❌ Nome de usuário já existe!
-                <?php elseif ($_GET['erro'] == 5): ?>
+                @elseif (session('erro') == 5 || session('erro_codigo_admin'))
                     ❌ Código de admin inválido!
-                <?php endif; ?>
+                @else
+                    ❌ Erro ao cadastrar. Tente novamente!
+                @endif
             </div>
-        <?php endif; ?>
+        @endif
         
-        <form method="post" action="<?= $baseUrl ?>/cadastrar">
+        <form method="POST" action="{{ url('/cadastrar') }}">
+            @csrf
+            
             <div class="form-group">
                 <label>👤 Nome completo</label>
-                <input type="text" name="nome" placeholder="Digite seu nome completo" required autofocus>
+                <input type="text" name="nome" placeholder="Digite seu nome completo" value="{{ old('nome') }}" required autofocus>
             </div>
             
             <div class="form-group">
                 <label>🏷️ Nome de usuário</label>
-                <input type="text" name="nome_usuario" placeholder="Escolha um nome de usuário" required>
+                <input type="text" name="nome_usuario" placeholder="Escolha um nome de usuário" value="{{ old('nome_usuario') }}" required>
             </div>
             
             <div class="form-group">
                 <label>📧 Email</label>
-                <input type="email" name="email" placeholder="Digite seu email" required>
+                <input type="email" name="email" placeholder="Digite seu email" value="{{ old('email') }}" required>
             </div>
             
             <div class="form-group">
@@ -228,10 +227,9 @@ $baseUrl = 'BASE_URL';
                 <div class="password-requirements">Mínimo de 6 caracteres</div>
             </div>
             
-            <!-- Opção para cadastrar como Admin -->
-            <div class="admin-option" id="adminOption">
+            <div class="admin-option {{ old('cadastrar_como_admin') ? 'warning' : '' }}" id="adminOption">
                 <label>
-                    <input type="checkbox" name="cadastrar_como_admin" value="1" id="adminCheckbox">
+                    <input type="checkbox" name="cadastrar_como_admin" value="1" id="adminCheckbox" {{ old('cadastrar_como_admin') ? 'checked' : '' }}>
                     <span>👑 Cadastrar como Administrador</span>
                 </label>
                 <div class="admin-info" id="adminInfo">
@@ -239,8 +237,7 @@ $baseUrl = 'BASE_URL';
                 </div>
             </div>
             
-            <!-- Campo para código de admin (inicialmente escondido) -->
-            <div class="form-group" id="codigoAdminGroup" style="display: none;">
+            <div class="form-group" id="codigoAdminGroup" style="display: {{ old('cadastrar_como_admin') ? 'block' : 'none' }};">
                 <label>🔐 Código de Administrador</label>
                 <input type="password" name="codigo_admin" id="codigoAdmin" placeholder="Digite o código de segurança">
                 <div class="password-requirements">Código: ADMIN123</div>
@@ -250,12 +247,11 @@ $baseUrl = 'BASE_URL';
         </form>
         
         <div class="login-link">
-            <a href="<?= $baseUrl ?>/login">🔑 Já tem conta? Faça login</a>
+            <a href="{{ url('/login') }}">🔑 Já tem conta? Faça login</a>
         </div>
     </div>
 
     <script>
-        // Mostrar/esconder campo de código admin
         const adminCheckbox = document.getElementById('adminCheckbox');
         const codigoAdminGroup = document.getElementById('codigoAdminGroup');
         const adminOption = document.getElementById('adminOption');
@@ -267,6 +263,7 @@ $baseUrl = 'BASE_URL';
             } else {
                 codigoAdminGroup.style.display = 'none';
                 adminOption.classList.remove('warning');
+                document.getElementById('codigoAdmin').value = '';
             }
         });
     </script>

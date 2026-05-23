@@ -1,17 +1,20 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+@include('layouts.header')
 
 <div class="admin-container">
     <h2>🚨 Denúncias Recebidas</h2>
     
-    <?php if (isset($_SESSION['mensagem'])): ?>
-        <div class="alert-success"><?= $_SESSION['mensagem'] ?><?php unset($_SESSION['mensagem']); ?></div>
-    <?php endif; ?>
+    {{-- Sistema de alertas nativo do Laravel --}}
+    @if (session('mensagem'))
+        <div class="alert-success">
+            {{ session('mensagem') }}
+        </div>
+    @endif
     
-    <?php if (empty($denuncias)): ?>
+    @if (empty($denuncias) || count($denuncias) === 0)
         <div class="empty-state">
             <p>📭 Nenhuma denúncia encontrada.</p>
         </div>
-    <?php else: ?>
+    @else
         <table class="admin-table">
             <thead>
                 <tr>
@@ -26,41 +29,47 @@
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($denuncias as $d): ?>
+                @foreach ($denuncias as $d)
+                @php 
+                    // Garante que o item seja tratado como array com segurança
+                    $dArray = (array) $d; 
+                @endphp
                 <tr>
-                    <td>#<?= $d['id'] ?> </td>
+                    <td>#{{ $dArray['id'] }}</td>
                     <td style="max-width: 200px;">
-                        <?= htmlspecialchars(substr($d['publicacao_legenda'] ?? '', 0, 50)) ?>...
+                        {{ Str::limit($dArray['publicacao_legenda'] ?? '', 50, '...') }}
                     </td>
                     <td>
-                        <strong><?= htmlspecialchars($d['usuario_nome'] ?? 'Usuário') ?></strong>
+                        <strong>{{ $dArray['usuario_nome'] ?? 'Usuário' }}</strong>
                     </td>
-                    <td><?= htmlspecialchars($d['motivo']) ?> </td>
+                    <td>{{ $dArray['motivo'] }}</td>
                     <td>
-                        <span class="gravidade gravidade-<?= $d['gravidade'] ?>">
-                            <?= ucfirst($d['gravidade']) ?>
+                        <span class="gravidade gravidade-{{ $dArray['gravidade'] }}">
+                            {{ ucfirst($dArray['gravidade']) }}
                         </span>
                     </td>
                     <td>
-                        <span class="status status-<?= $d['status'] ?>">
-                            <?= ucfirst($d['status']) ?>
+                        <span class="status status-{{ $dArray['status'] }}">
+                            {{ ucfirst($dArray['status']) }}
                         </span>
                     </td>
-                    <td><?= date('d/m/Y H:i', strtotime($d['criado_em'])) ?> </td>
+                    <td>{{ date('d/m/Y H:i', strtotime($dArray['criado_em'])) }}</td>
                     <td class="actions">
-                        <a href="<?= BASE_URL ?>/admin/publicacoes/<?= $d['publicacao_id'] ?>" class="btn-ver">👁️ Ver Post</a>
-                        <?php if ($d['status'] == 'pendente'): ?>
-                            <a href="<?= BASE_URL ?>/admin/denuncias/<?= $d['id'] ?>/analisar" class="btn-analisar">✅ Analisar</a>
-                        <?php endif; ?>
+                        <a href="{{ url('/admin/publicacoes/' . $dArray['publicacao_id']) }}" class="btn-ver">👁️ Ver Post</a>
+                        
+                        @if ($dArray['status'] == 'pendente')
+                            <a href="{{ url('/admin/denuncias/' . $dArray['id'] . '/analisar') }}" class="btn-analisar">✅ Analisar</a>
+                        @endif
                     </td>
                 </tr>
-                <?php endforeach; ?>
+                @endforeach
             </tbody>
         </table>
-    <?php endif; ?>
+    @endif
 </div>
 
 <style>
+/* Mantido seu CSS original perfeitamente intacto */
 .admin-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -178,4 +187,4 @@
 }
 </style>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+@include('layouts.footer')

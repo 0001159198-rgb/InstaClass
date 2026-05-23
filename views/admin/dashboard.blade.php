@@ -1,4 +1,4 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+@include('layouts.header') {{-- Substituição do include de cabeçalho antigo --}}
 
 <div class="admin-container">
     <h2>📊 Dashboard Administrativo</h2>
@@ -7,7 +7,7 @@
         <div class="card-indicador">
             <div class="indicador-icon">👥</div>
             <div class="indicador-info">
-                <h3><?= $totalUsuarios ?? 0 ?></h3>
+                <h3>{{ $totalUsuarios ?? 0 }}</h3>
                 <p>Usuários</p>
             </div>
         </div>
@@ -15,7 +15,7 @@
         <div class="card-indicador">
             <div class="indicador-icon">📷</div>
             <div class="indicador-info">
-                <h3><?= $totalPublicacoes ?? 0 ?></h3>
+                <h3>{{ $totalPublicacoes ?? 0 }}</h3>
                 <p>Publicações</p>
             </div>
         </div>
@@ -23,30 +23,26 @@
         <div class="card-indicador">
             <div class="indicador-icon">🚨</div>
             <div class="indicador-info">
-                <h3><?= $totalDenuncias ?? 0 ?></h3>
+                <h3>{{ $totalDenuncias ?? 0 }}</h3>
                 <p>Denúncias</p>
-                <?php if (($totalDenuncias ?? 0) > 0): ?>
+                @if (($totalDenuncias ?? 0) > 0)
                     <span class="badge-novo">Novas</span>
-                <?php endif; ?>
+                @endif
             </div>
         </div>
-        
-        <!-- CARD PENDENTES REMOVIDO -->
-        
     </div>
     
-    <!-- Denúncias Recentes -->
     <div class="denuncias-recentes">
         <div class="section-header">
             <h3>🚨 Denúncias Recentes</h3>
-            <a href="<?= BASE_URL ?>/admin/denuncias" class="ver-todas">Ver todas →</a>
+            <a href="{{ url('/admin/denuncias') }}" class="ver-todas">Ver todas →</a>
         </div>
         
-        <?php if (empty($denunciasRecentes)): ?>
+        @if (empty($denunciasRecentes) || count($denunciasRecentes) === 0)
             <div class="empty-denuncias">
                 <p>✅ Nenhuma denúncia pendente. Tudo tranquilo!</p>
             </div>
-        <?php else: ?>
+        @else
             <table class="denuncias-table">
                 <thead>
                     <tr>
@@ -58,45 +54,50 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($denunciasRecentes as $den): ?>
+                    @foreach ($denunciasRecentes as $den)
+                    @php 
+                        // Tratamento seguro para converter o objeto ou array do banco
+                        $denArray = (array) $den; 
+                    @php
                     <tr>
                         <td class="legenda-cell">
-                            <?= htmlspecialchars(substr($den['publicacao_legenda'] ?? '', 0, 40)) ?>...
+                            {{ Str::limit($denArray['publicacao_legenda'] ?? '', 40, '...') }}
                         </td>
-                        <td><?= htmlspecialchars($den['motivo']) ?></td>
+                        <td>{{ $denArray['motivo'] }}</td>
                         <td>
-                            <span class="gravidade gravidade-<?= $den['gravidade'] ?>">
-                                <?= ucfirst($den['gravidade']) ?>
+                            <span class="gravidade gravidade-{{ $denArray['gravidade'] }}">
+                                {{ ucfirst($denArray['gravidade']) }}
                             </span>
                         </td>
-                        <td><?= date('d/m/Y H:i', strtotime($den['criado_em'])) ?></td>
+                        <td>{{ date('d/m/Y H:i', strtotime($denArray['criado_em'])) }}</td>
                         <td>
-                            <a href="<?= BASE_URL ?>/admin/publicacoes/<?= $den['publicacao_id'] ?>" class="btn-ver">Ver</a>
+                            <a href="{{ url('/admin/publicacoes/' . $denArray['publicacao_id']) }}" class="btn-ver">Ver</a>
                         </td>
                     </tr>
-                    <?php endforeach; ?>
+                    @endforeach
                 </tbody>
             </table>
-        <?php endif; ?>
+        @endif
     </div>
     
     <div class="admin-menu">
-        <a href="<?= BASE_URL ?>/admin/usuarios" class="admin-btn">
+        <a href="{{ url('/admin/usuarios') }}" class="admin-btn">
             <span>👥</span> Gerenciar Usuários
         </a>
-        <a href="<?= BASE_URL ?>/admin/publicacoes" class="admin-btn">
+        <a href="{{ url('/admin/publicacoes') }}" class="admin-btn">
             <span>📷</span> Gerenciar Publicações
         </a>
-        <a href="<?= BASE_URL ?>/admin/denuncias" class="admin-btn">
+        <a href="{{ url('/admin/denuncias') }}" class="admin-btn">
             <span>🚨</span> Ver Denúncias
-            <?php if (($totalDenuncias ?? 0) > 0): ?>
-                <span class="badge-count"><?= $totalDenuncias ?></span>
-            <?php endif; ?>
+            @if (($totalDenuncias ?? 0) > 0)
+                <span class="badge-count">{{ $totalDenuncias }}</span>
+            @endif
         </a>
     </div>
 </div>
 
 <style>
+/* Mantido 100% o seu CSS original sem alterações */
 .admin-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -315,4 +316,4 @@
 }
 </style>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+@include('layouts.footer') {{-- Substituição do include de rodapé antigo --}}

@@ -1,22 +1,32 @@
 <?php
 
-class ControladorAdmin {
+namespace App\Http\Controllers;
 
-    // MÉTODO AUXILIAR PRIVADO: Evita repetição de código em todas as funções
-    private function verificarAdmin() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (!isset($_SESSION['usuario_tipo']) || $_SESSION['usuario_tipo'] != 'admin') {
-            header('Location: ' . BASE_URL . '/login');
-            exit;
-        }
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\Usuario;    // Ajuste o namespace para seus Models reais
+use App\Models\Publicacao; // Ajuste o namespace para seus Models reais
+use App\Models\Denuncia;   // Ajuste o namespace para seus Models reais
+
+class ControladorAdmin extends Controller {
+
+    /**
+     * Construtor do Controlador.
+     * Define que apenas usuários logados do tipo 'admin' podem acessar estes métodos.
+     * Isso substitui a função manual 'verificarAdmin()' usando a proteção nativa do Laravel.
+     */
+    public function __construct() {
+        $this->middleware(function ($request, $next) {
+            if (!auth()->check() || auth()->user()->tipo !== 'admin') {
+                return redirect()->to('/login')->send();
+            }
+            return $next($request);
+        });
     }
 
+    // ================== DASHBOARD ==================
+
     public function dashboard() {
-        $this->verificarAdmin();
-        
         // Buscar dados para os indicadores
         $totalUsuarios = Usuario::total();
         $totalPublicacoes = count(Publicacao::todas());
@@ -26,135 +36,106 @@ class ControladorAdmin {
         // Buscar denúncias recentes
         $denunciasRecentes = Denuncia::recentes(5);
         
-        require __DIR__ . '/../../views/admin/dashboard.php';
+        return view('admin.dashboard', compact(
+            'totalUsuarios', 
+            'totalPublicacoes', 
+            'totalDenuncias', 
+            'totalPendentes', 
+            'denunciasRecentes'
+        ));
     }
 
+    // ================== LISTAGENS ==================
+
     public function listarUsuarios() {
-        $this->verificarAdmin();
-        
         $usuarios = Usuario::todos();
-        require __DIR__ . '/../../views/admin/usuarios.php';
+        return view('admin.usuarios', compact('usuarios'));
     }
 
     public function listarPublicacoes() {
-        $this->verificarAdmin();
-        
         $publicacoes = Publicacao::todas();
-        require __DIR__ . '/../../views/admin/publicacoes.php';
+        return view('admin.publicacoes', compact('publicacoes'));
     }
 
     public function listarDenuncias() {
-        $this->verificarAdmin();
-        
         $denuncias = Denuncia::all();
-        require __DIR__ . '/../../views/admin/denuncias.php';
+        return view('admin.denuncias', compact('denuncias'));
     }
 
+    // ================== AÇÕES SOBRE AS PUBLICAÇÕES ==================
+
     public function verPublicacao($id) {
-        $this->verificarAdmin();
-        
-        // Validar ID
         if (empty($id) || !is_numeric($id)) {
-            $_SESSION['erro'] = "ID de publicação inválido.";
-            header("Location: " . BASE_URL . "/admin/publicacoes");
-            exit;
+            return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         $publicacao = Publicacao::buscarPorId($id);
         if (!$publicacao) {
-            $_SESSION['erro'] = "Publicação não encontrada!";
-            header("Location: " . BASE_URL . "/admin/publicacoes");
-            exit;
+            return redirect()->to('/admin/publicacoes')->with('erro', 'Publicação não encontrada!');
         }
         
-        require __DIR__ . '/../../views/admin/ver_publicacao.php';
+        return view('admin.ver_publicacao', compact('publicacao'));
     }
 
     public function aprovarPublicacao($id) {
-        $this->verificarAdmin();
-        
         if (empty($id) || !is_numeric($id)) {
-            $_SESSION['erro'] = "ID de publicação inválido.";
-            header("Location: " . BASE_URL . "/admin/publicacoes");
-            exit;
+            return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
-            $db = Database::connect();
-            $stmt = $db->prepare("UPDATE publicacoes SET status = 'aprovado' WHERE id = ?");
-            $stmt->execute([$id]);
+            // Substituição do Database::connect() pelo Query Builder do Laravel
+            DB::table('publicacoes')->where('id', $id)->update(['status' => 'aprovado']);
             
-            $_SESSION['mensagem'] = "✅ Publicação #$id aprovada com sucesso!";
-        } catch (Exception $e) {
-            $_SESSION['erro'] = "Erro ao aprovar publicação: " . $e->getMessage();
+            return redirect()->to('/admin/publicacoes')->with('mensagem', "✅ Publicação #$id aprovada com sucesso!");
+        } catch (\Exception $e) {
+            return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao aprovar publicação: ' . $e->getMessage());
         }
-        
-        header("Location: " . BASE_URL . "/admin/publicacoes");
-        exit;
     }
 
     public function determinarStatus($id, $status, $mensagemSucesso) {
         try {
-            $db = Database::connect();
-            $stmt = $db->prepare("UPDATE publicacoes SET status = ? WHERE id = ?");
-            $stmt->execute([$status, $id]);
-            $_SESSION['mensagem'] = $mensagemSucesso;
-        } catch (Exception $e) {
-            $_SESSION['erro'] = "Erro ao atualizar publicação: " . $e->getMessage();
+            DB::table('publicacoes')->where('id', $id)->update(['status' => $status]);
+            session()->flash('mensagem', $mensagemSucesso);
+        } catch (\Exception $e) {
+            session()->flash('erro', 'Erro ao atualizar publicação: ' . $e->getMessage());
         }
     }
 
     public function bloquearPublicacao($id) {
-        $this->verificarAdmin();
-        
         if (empty($id) || !is_numeric($id)) {
-            $_SESSION['erro'] = "ID de publicação inválido.";
-            header("Location: " . BASE_URL . "/admin/publicacoes");
-            exit;
+            return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
-            $db = Database::connect();
-            $stmt = $db->prepare("UPDATE publicacoes SET status = 'bloqueado' WHERE id = ?");
-            $stmt->execute([$id]);
+            DB::table('publicacoes')->where('id', $id)->update(['status' => 'bloqueado']);
             
-            $_SESSION['mensagem'] = "🚫 Publicação #$id bloqueada com sucesso!";
-        } catch (Exception $e) {
-            $_SESSION['erro'] = "Erro ao bloquear publicação: " . $e->getMessage();
+            return redirect()->to('/admin/publicacoes')->with('mensagem', "🚫 Publicação #$id bloqueada com sucesso!");
+        } catch (\Exception $e) {
+            return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao bloquear publicação: ' . $e->getMessage());
         }
-        
-        header("Location: " . BASE_URL . "/admin/publicacoes");
-        exit;
     }
 
     public function excluirPublicacao($id) {
-        $this->verificarAdmin();
-        
         if (empty($id) || !is_numeric($id)) {
-            $_SESSION['erro'] = "ID de publicação inválido.";
-            header("Location: " . BASE_URL . "/admin/publicacoes");
-            exit;
+            return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
-            $db = Database::connect();
+            // Gerencia a exclusão em lote de forma limpa usando o DB do Laravel
+            DB::transaction(function () use ($id) {
+                // Primeiro, excluir as curtidas relacionadas
+                DB::table('curtidas')->where('publicacao_id', $id)->delete();
+                
+                // Depois, excluir as denúncias relacionadas
+                DB::table('denuncias')->where('publicacao_id', $id)->delete();
+                
+                // Por fim, excluir a publicação
+                DB::table('publicacoes')->where('id', $id)->delete();
+            });
             
-            // Primeiro, excluir as curtidas relacionadas
-            $db->prepare("DELETE FROM curtidas WHERE publicacao_id = ?")->execute([$id]);
-            
-            // Depois, excluir as denúncias relacionadas
-            $db->prepare("DELETE FROM denuncias WHERE publicacao_id = ?")->execute([$id]);
-            
-            // Por fim, excluir a publicação
-            $stmt = $db->prepare("DELETE FROM publicacoes WHERE id = ?");
-            $stmt->execute([$id]);
-            
-            $_SESSION['mensagem'] = "🗑️ Publicação #$id excluída permanentemente!";
-        } catch (Exception $e) {
-            $_SESSION['erro'] = "Erro ao excluir publicação: " . $e->getMessage();
+            return redirect()->to('/admin/publicacoes')->with('mensagem', "🗑️ Publicação #$id excluída permanentemente!");
+        } catch (\Exception $e) {
+            return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao excluir publicação: ' . $e->getMessage());
         }
-        
-        header("Location: " . BASE_URL . "/admin/publicacoes");
-        exit;
     }
 }

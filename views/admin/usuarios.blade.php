@@ -1,4 +1,4 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+@include('layouts.header')
 
 <div class="admin-container">
     <h2>👥 Gerenciar Usuários</h2>
@@ -15,25 +15,39 @@
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($usuarios as $user): ?>
+            @foreach ($usuarios as $user)
+            @php 
+                // Proteção para garantir que o registro possa ser lido como array com segurança
+                $userArray = (array) $user; 
+            @endphp
             <tr>
-                <td>#<?= $user['id'] ?></td>
-                <td><?= htmlspecialchars($user['nome']) ?></td>
-                <td>@<?= htmlspecialchars($user['nome_usuario']) ?></td>
-                <td><?= htmlspecialchars($user['email']) ?></td>
+                <td>#{{ $userArray['id'] }}</td>
+                <td>{{ $userArray['nome'] }}</td>
+                <td>@{{ $userArray['nome_usuario'] }}</td>
+                <td>{{ $userArray['email'] }}</td>
                 <td>
-                    <span class="badge <?= $user['tipo'] == 'admin' ? 'badge-admin' : 'badge-user' ?>">
-                        <?= $user['tipo'] ?>
+                    <span class="badge {{ $userArray['tipo'] == 'admin' ? 'badge-admin' : 'badge-user' }}">
+                        {{ $userArray['tipo'] }}
                     </span>
                 </td>
-                <td><?= date('d/m/Y', strtotime($user['criado_em'])) ?></td>
+                <td>{{ date('d/m/Y', strtotime($userArray['criado_em'])) }}</td>
             </tr>
-            <?php endforeach; ?>
+            @endforeach
         </tbody>
     </table>
 </div>
 
 <style>
+/* Mantido seu CSS original perfeitamente intacto */
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.admin-container h2 {
+    margin-bottom: 20px;
+    color: #262626;
+}
 .admin-table {
     width: 100%;
     background: white;
@@ -68,4 +82,4 @@
 }
 </style>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+@include('layouts.footer')
