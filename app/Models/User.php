@@ -10,16 +10,15 @@ class User extends Authenticatable
 {
     use Notifiable;
 
-    protected $table = 'usuarios'; // Altere para o nome real da sua tabela se não for 'usuarios'
+    protected $table = 'usuarios'; 
 
     protected $fillable = ['nome', 'nome_usuario', 'email', 'senha', 'tipo'];
 
-    public $timestamps = false; // Desativa as colunas created_at e updated_at se você não as tiver na tabela
+    public $timestamps = false; 
 
     // ========== MÉTODOS PERSONALIZADOS QUE SEU CONTROLADOR EXIGE ==========
 
     public static function buscarPorEmail($email) {
-        // Busca usando o Query Builder do Laravel
         $usuario = DB::table('usuarios')->where('email', $email)->first();
         return $usuario ? (array) $usuario : null;
     }
@@ -30,6 +29,7 @@ class User extends Authenticatable
     }
 
     public static function emailExiste($email) {
+        // CORREÇÃO: Mudado de 'cliente' para 'usuarios' para apontar para a tabela correta
         return DB::table('usuarios')->where('email', $email)->exists();
     }
 
