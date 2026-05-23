@@ -64,7 +64,6 @@ class User extends Model
             'nome_usuario' => $nome_usuario,
             'email' => $email,
             'senha' => $senhaHash,
-            'tipo' => $tipo
         ]);
     }
 }

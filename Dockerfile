@@ -38,4 +38,4 @@ EXPOSE 80
 # =========================
 # 🚀 CMD FINAL (AQUI ESTÁ A CORREÇÃO)
 # =========================
-CMD bash -c "touch /tmp/database.sqlite && chmod 666 /tmp/database.sqlite && php artisan config:clear && php artisan migrate --force && apache2-foreground"
+CMD bash -c "php artisan optimize:clear && touch /tmp/database.sqlite && chmod 666 /tmp/database.sqlite && php artisan migrate --force && apache2-foreground"
