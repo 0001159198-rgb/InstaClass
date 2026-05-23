@@ -7,7 +7,7 @@ zip \
 unzip \
 libpq-dev \
 libzip-dev \
-&& docker-php-ext-install pdo pdo_pgsql zip
+&& docker-php-ext-install pdo_pgsql zip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -17,12 +17,15 @@ COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
 
-# Estas linhas abaixo criam o esqueleto que vai aceitar as variáveis do painel do Render
 RUN cp .env.example .env
 RUN php artisan key:generate
 
+# CRIA O BANCO DE DADOS EM ARQUIVO GRATUITO AQUI:
+RUN touch database/database.sqlite && chmod 777 database/database.sqlite
+
 RUN chown -R www-data:www-data /var/www/html/storage
 RUN chown -R www-data:www-data /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/database
 
 RUN a2enmod rewrite
 
@@ -30,4 +33,5 @@ COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+# COMANDO ATUALIZADO: Roda as tabelas sozinho e liga o app
+CMD php artisan migrate --force && apache2-foreground
