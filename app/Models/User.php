@@ -2,50 +2,63 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-class User extends Authenticatable
+class User extends Model
 {
-    use Notifiable;
+    protected $table = 'usuarios';
 
-    protected $table = 'usuarios'; 
+    public $timestamps = false;
 
-    protected $fillable = ['nome', 'nome_usuario', 'email', 'senha', 'tipo'];
+    protected $fillable = [
+        'nome',
+        'nome_usuario',
+        'email',
+        'senha',
+        'tipo'
+    ];
 
-    public $timestamps = false; 
+    // =========================
+    // BUSCAS
+    // =========================
 
-    // ========== MÉTODOS PERSONALIZADOS QUE SEU CONTROLADOR EXIGE ==========
-
-    public static function buscarPorEmail($email) {
-        $usuario = DB::table('usuarios')->where('email', $email)->first();
-        return $usuario ? (array) $usuario : null;
+    public static function buscarPorEmail($email)
+    {
+        return DB::table('usuarios')->where('email', $email)->first();
     }
 
-    public static function buscarPorId($id) {
-        $usuario = DB::table('usuarios')->where('id', $id)->first();
-        return $usuario ? (array) $usuario : null;
+    public static function buscarPorId($id)
+    {
+        return DB::table('usuarios')->where('id', $id)->first();
     }
 
-    public static function emailExiste($email) {
-        // CORREÇÃO: Mudado de 'cliente' para 'usuarios' para apontar para a tabela correta
+    public static function emailExiste($email)
+    {
         return DB::table('usuarios')->where('email', $email)->exists();
     }
 
-    public static function nomeUsuarioExiste($nome_usuario) {
+    public static function nomeUsuarioExiste($nome_usuario)
+    {
         return DB::table('usuarios')->where('nome_usuario', $nome_usuario)->exists();
     }
 
-    public static function total() {
+    public static function total()
+    {
         return DB::table('usuarios')->count();
     }
 
-    public static function todos() {
-        return DB::table('usuarios')->get()->toArray();
+    public static function todos()
+    {
+        return DB::table('usuarios')->get();
     }
 
-    public static function criar($nome, $nome_usuario, $email, $senhaHash, $tipo) {
+    // =========================
+    // CRIAR USUÁRIO
+    // =========================
+
+    public static function criar($nome, $nome_usuario, $email, $senhaHash, $tipo)
+    {
         return DB::table('usuarios')->insert([
             'nome' => $nome,
             'nome_usuario' => $nome_usuario,
