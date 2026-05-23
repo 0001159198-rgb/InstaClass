@@ -18,14 +18,22 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
 RUN cp .env.example .env
+
+# 🚀 CORREÇÃO CRÍTICA: Força o arquivo .env de dentro do container a usar o SQLite gratuito
+RUN sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=sqlite/g' .env
+RUN sed -i 's/DB_DATABASE=.*/DB_DATABASE=\/tmp\/database.sqlite/g' .env
+
 RUN php artisan key:generate
 
+RUN php artisan config:clear
+RUN php artisan route:clear
+RUN php artisan view:clear
+
 # CRIA O BANCO DE DADOS EM ARQUIVO GRATUITO AQUI:
-RUN touch database/database.sqlite && chmod 777 database/database.sqlite
+RUN touch /tmp/database.sqlite && chmod 777 /tmp/database.sqlite
 
 RUN chown -R www-data:www-data /var/www/html/storage
 RUN chown -R www-data:www-data /var/www/html/bootstrap/cache
-RUN chown -R www-data:www-data /var/www/html/database
 
 RUN a2enmod rewrite
 
@@ -33,5 +41,4 @@ COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-# COMANDO ATUALIZADO: Roda as tabelas sozinho e liga o app
 CMD php artisan migrate --force && apache2-foreground
