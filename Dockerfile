@@ -30,12 +30,9 @@ RUN chown -R www-data:www-data /var/www/html \
 # Apache rewrite
 RUN a2enmod rewrite
 
-# Config Apache (se você usa vhost customizado)
+# Config Apache
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
-# =========================
-# 🚀 CMD FINAL (AQUI ESTÁ A CORREÇÃO)
-# =========================
-CMD bash -c "php artisan optimize:clear && touch /tmp/database.sqlite && chmod 666 /tmp/database.sqlite && php artisan migrate --force && apache2-foreground"
+CMD bash -c "php artisan config:clear && php artisan cache:clear && php artisan optimize:clear && php artisan migrate --force && apache2-foreground"
