@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\ControladorCliente;
 use App\Http\Controllers\ControladorAdmin;
 
@@ -28,7 +29,10 @@ Route::prefix('admin')->group(function () {
     Route::post('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao']);
     Route::post('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao']);
 });
-
+Route::get('/clear-cache', function () {
+    Artisan::call('optimize:clear');
+    return nl2br(Artisan::output());
+});
 Route::get('/rodar-seed-temporario', function() {
     $seeder = new \Database\Seeders\DatabaseSeeder();
     $seeder->run();
