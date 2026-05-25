@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Publicacao;
+use App\Models\Publicacao; // Mantido apenas uma vez para corrigir o erro
 use App\Models\User as Usuario;
 use App\Models\Curtida;
 use App\Models\Denuncia;
@@ -168,7 +168,6 @@ class ControladorCliente extends Controller {
 
         $usuario = Usuario::buscarPorEmail($email);
 
-        // CORREÇÃO AQUI
         if ($usuario && password_verify($senha, $usuario->senha)) {
 
             if (
