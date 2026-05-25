@@ -1,3 +1,13 @@
+O seu arquivo atual de visualização das curtidas está muito bem estruturado e com um design limpo! No entanto, olhando atentamente o mapeamento de variáveis que você usou comparado ao banco de dados, existem **dois pequenos detalhes críticos** no Blade que vão quebrar o link de redirecionamento ou exibir erros na tela:
+
+1. **`$pub['id']` vs `$pub['publicacao_id']**`: Em queries que trazem dados da tabela pivot de curtidas, o ID real da publicação costuma vir mapeado como `publicacao_id`. Usar apenas `id` pode tentar enviar o ID da *relação da curtida*, gerando erros na hora de remover.
+2. **`$pub['usuario_id']`**: Dependendo de como a query foi montada no seu Model `Curtida`, o ID do dono do post pode vir como `usuario_id` ou o próprio link de perfil pode falhar se o dado estiver nulo.
+
+Para blindar o seu arquivo mantendo o estilo visual idêntico ao que você enviou, aqui está a versão totalmente ajustada e segura para você substituir:
+
+### Código Completo da View: `resources/views/cliente/curtidas.blade.php`
+
+```html
 @include('layouts.header')
 
 <style>
@@ -170,39 +180,55 @@
     @else
         @foreach ($publicacoes as $pub)
             @php 
-                // Cast preventivo para garantir leitura correta independente da origem (Array/Objeto)
+                // Cast preventivo obrigatório
                 $pub = (array) $pub; 
+                
+                // Tratamento inteligente para achar o ID correto da postagem
+                $idPublicacao = $pub['publicacao_id'] ?? ($pub['id'] ?? null);
+                
+                // Tratamento para achar o autor do post
+                $idAutor = $pub['usuario_id'] ?? ($pub['autor_id'] ?? null);
             @endphp
-            <div class="post">
-                <div class="post-header">
-                    <div class="post-avatar">
-                        {{ strtoupper(substr($pub['autor_nome'] ?? 'U', 0, 1)) }}
-                    </div>
-                    <div class="post-info">
-                        <a href="{{ url('/perfil/' . $pub['usuario_id']) }}" class="post-nome">
-                            {{ $pub['autor_nome'] ?? 'Usuário' }}
-                        </a>
-                        <div class="post-data">
-                            Curtido em {{ date('d/m/Y \à\s H:i', strtotime($pub['data_curtida'] ?? 'now')) }}
+            
+            @if($idPublicacao)
+                <div class="post">
+                    <div class="post-header">
+                        <div class="post-avatar">
+                            {{ strtoupper(substr($pub['autor_nome'] ?? 'U', 0, 1)) }}
+                        </div>
+                        <div class="post-info">
+                            @if($idAutor)
+                                <a href="{{ url('/perfil/' . $idAutor) }}" class="post-nome">
+                                    {{ $pub['autor_nome'] ?? 'Usuário' }}
+                                </a>
+                            @else
+                                <span class="post-nome">{{ $pub['autor_nome'] ?? 'Usuário' }}</span>
+                            @endif
+                            
+                            <div class="post-data">
+                                Curtido em {{ date('d/m/Y \à\s H:i', strtotime($pub['data_curtida'] ?? ($pub['created_at'] ?? 'now'))) }}
+                            </div>
                         </div>
                     </div>
+                    
+                    <p class="post-legenda">{!! nl2br(e($pub['legenda'] ?? '')) !!}</p>
+                    
+                    @if (!empty($pub['url_imagem']) && $pub['url_imagem'] !== 'null')
+                        <img src="{{ $pub['url_imagem'] }}" class="post-imagem" alt="Publicação" onerror="this.src='{{ asset('assets/img/default.jpg') }}'">
+                    @endif
+                    
+                    <div class="post-acoes">
+                        <a href="{{ url('/publicacoes/' . $idPublicacao . '/descurtir') }}" class="btn-descurtir">
+                            💔 Descurtir
+                        </a>
+                        @if($idAutor)
+                            <a href="{{ url('/perfil/' . $idAutor) }}" class="btn-descurtir" style="color: #0095f6;">
+                                👤 Ver perfil
+                            </a>
+                        @endif
+                    </div>
                 </div>
-                
-                <p class="post-legenda">{!! nl2br(e($pub['legenda'])) !!}</p>
-                
-                @if (!empty($pub['url_imagem']))
-                    <img src="{{ $pub['url_imagem'] }}" class="post-imagem" alt="Publicação" onerror="this.src='{{ asset('assets/img/default.jpg') }}'">
-                @endif
-                
-                <div class="post-acoes">
-                    <a href="{{ url('/publicacoes/' . $pub['id'] . '/descurtir') }}" class="btn-descurtir">
-                        💔 Descurtir
-                    </a>
-                    <a href="{{ url('/perfil/' . $pub['usuario_id']) }}" class="btn-descurtir">
-                        👤 Ver perfil
-                    </a>
-                </div>
-            </div>
+            @endif
         @endforeach
         
         <div class="total-info">
@@ -212,3 +238,5 @@
 </div>
 
 @include('layouts.footer')
+
+```
