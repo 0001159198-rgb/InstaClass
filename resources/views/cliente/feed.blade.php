@@ -21,7 +21,7 @@
             <span class="close-modal">&times;</span>
         </div>
         <form id="formDenuncia" method="POST">
-            @csrf {{-- Proteção obrigatória contra ataques CSRF --}}
+            @csrf 
             <input type="hidden" name="publicacao_id" id="publicacao_id">
             <p>Selecione o motivo da denúncia:</p>
             <div class="motivo-option" data-motivo="Conteúdo impróprio">📝 Conteúdo impróprio</div>
@@ -54,7 +54,6 @@
                 @else
                     @foreach ($publicacoes as $pub)
                         @php 
-                            // Cast preventivo para garantir compatibilidade com arrays ou objetos do banco
                             $pub = (array) $pub; 
                         @endphp
                         <div class="post">
@@ -93,6 +92,131 @@
         </div>
     </main>
 </div>
+
+<style>
+/* Fundo preto semitransparente cobrindo toda a tela */
+.modal {
+    display: none; 
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+/* Caixa centralizada do modal */
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 450px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    animation: abrirModalAnimacao 0.3s ease-out;
+}
+
+@keyframes abrirModalAnimacao {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #efefef;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #262626;
+}
+
+.close-modal {
+    font-size: 28px;
+    font-weight: bold;
+    color: #8e8e8e;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    color: #262626;
+}
+
+/* Opções de clique do motivo */
+.motivo-option {
+    padding: 10px 12px;
+    border: 1px solid #dbdbdb;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.motivo-option:hover {
+    background-color: #fafafa;
+    border-color: #b2b2b2;
+}
+
+.motivo-option.selected {
+    background-color: #e8f5fe;
+    border-color: #3897f0;
+    color: #004c8c;
+    font-weight: 600;
+}
+
+/* Input extra para a opção 'Outro' */
+.motivo-outro {
+    display: none;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #dbdbdb;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.motivo-outro.show {
+    display: block;
+}
+
+.btn-enviar {
+    width: 100%;
+    padding: 12px;
+    background-color: #ed4956;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.btn-enviar:hover {
+    background-color: #c92f3c;
+}
+
+/* Estilos básicos de mensagens flash */
+.mensagem-flash, .erro-flash {
+    padding: 12px;
+    margin: 10px auto;
+    max-width: 600px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+    transition: opacity 0.5s ease;
+}
+.mensagem-flash { background-color: #e8f5e9; color: #2e7d32; }
+.erro-flash { background-color: #ffebee; color: #c62828; }
+</style>
 
 <script>
 // ================== MODAL DE DENÚNCIA ==================
@@ -169,7 +293,6 @@ document.getElementById('formDenuncia').addEventListener('submit', function(e) {
     form.method = 'POST';
     form.action = "{{ url('/publicacoes') }}/" + publicacaoId + "/denunciar";
     
-    // Adiciona o Token CSRF do Laravel para o envio de formulário dinâmico ser aceito pelo servidor
     var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     var inputToken = document.createElement('input');
     inputToken.type = 'hidden';
