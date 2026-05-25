@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory; // Adicionado para dar suporte total às Seeds
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
+    use HasFactory; // Adicionado para garantir o funcionamento correto de fábricas e seeders
+
     protected $table = 'usuarios';
 
     public $timestamps = false;
@@ -22,7 +25,7 @@ class User extends Authenticatable
         'senha'
     ];
 
-    // Informa ao Laravel que a senha está no campo "senha"
+    // Informa ao Laravel que a coluna da senha no banco se chama "senha" (e não "password")
     public function getAuthPassword()
     {
         return $this->senha;
