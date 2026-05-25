@@ -235,16 +235,12 @@ class ControladorCliente extends Controller {
                 'usuario_tipo' => $usuario->tipo
             ]);
 
-            // REDIRECIONAMENTO
-            if (
-                $tipoSelecionado == 'cliente'
-                && $usuario->tipo == 'admin'
-            ) {
+            // REDIRECIONAMENTO COM BASE NO TIPO (CORRIGIDO AQUI)
+            if ($usuario->tipo == 'admin') {
                 return redirect()->to('/admin');
             }
 
-            return ($usuario->tipo == 'admin')
-                ->with('mensagem', '❌ Erro ao criar publicação!');
+            return redirect()->to('/feed');
         }
 
         return redirect()->to(
