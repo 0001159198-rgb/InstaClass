@@ -67,7 +67,7 @@ class ControladorCliente extends Controller {
 
     public function listarPublicacoesUsuario($id = null) {
 
-        // Limpa espacos ou strings nulas enviadas por parametro
+        // Limpa espaços ou strings nulas enviadas por parâmetro
         $id = $id ? trim($id) : null;
 
         if (empty($id) || $id == 0 || $id === 'null') {
@@ -148,6 +148,8 @@ class ControladorCliente extends Controller {
         return view('cliente.busca', compact('publicacoes'));
     }
 
+    // ================== CURTIDAS ==================
+
     public function curtirPublicacao($id) {
 
         $usuario_id = auth()->id();
@@ -161,6 +163,11 @@ class ControladorCliente extends Controller {
 
         $usuario_id = auth()->id();
 
+        if (!$usuario_id) {
+            return redirect()->to('/login');
+        }
+
+        // Obtém as publicações curtidas pelo usuário e a contagem total
         $publicacoes = Curtida::getPublicacoesCurtidas($usuario_id);
         $totalCurtidas = Curtida::countCurtidas($usuario_id);
 
@@ -179,156 +186,11 @@ class ControladorCliente extends Controller {
         return redirect()->back();
     }
 
+    // ================== DENÚNCIAS ==================
+
     public function denunciarPublicacao(Request $request, $id) {
 
         $motivo = $request->input('motivo', 'Conteúdo impróprio');
         $gravidade = $request->input('gravidade', 'media');
 
         $resultado = Denuncia::criar(
-            $id,
-            $motivo,
-            $gravidade
-        );
-
-        if ($resultado) {
-            return redirect()->back()
-                ->with('mensagem', '✅ Denúncia enviada com sucesso!');
-        }
-
-        return redirect()->back()
-            ->with('erro', '❌ Você já denunciou esta publicação.');
-    }
-
-    // ================== LOGIN ==================
-
-    public function showLogin() {
-        return view('auth.login');
-    }
-
-    public function login(Request $request) {
-
-        $email = $request->input('email', '');
-        $senha = $request->input('senha', '');
-        $tipoSelecionado = $request->input('tipo', 'cliente');
-
-        if (empty($email) || empty($senha)) {
-            return redirect()->to('/login?erro=1');
-        }
-
-        $usuario = Usuario::buscarPorEmail($email);
-
-        if ($usuario && password_verify($senha, $usuario->senha)) {
-
-            if (
-                $tipoSelecionado == 'admin'
-                && $usuario->tipo != 'admin'
-            ) {
-                return redirect()->to('/login?erro=2&tipo=admin');
-            }
-
-            // LOGIN LARAVEL
-            auth()->loginUsingId($usuario->id);
-
-            // SESSÃO
-            session([
-                'usuario_id' => $usuario->id,
-                'usuario_nome' => $usuario->nome,
-                'usuario_email' => $usuario->email,
-                'usuario_tipo' => $usuario->tipo
-            ]);
-
-            // REDIRECIONAMENTO CORRETO DEPENDENDO DO PERFIL
-            if ($usuario->tipo == 'admin') {
-                return redirect()->to('/admin');
-            }
-
-            return redirect()->to('/feed');
-        }
-
-        return redirect()->to(
-            '/login?erro=2&tipo=' . $tipoSelecionado
-        );
-    }
-
-    // ================== LOGOUT ==================
-
-    public function logout() {
-
-        auth()->logout();
-        session()->flush();
-
-        return redirect()->to('/');
-    }
-
-    // ================== REGISTRO ==================
-
-    public function showRegistro() {
-        return view('auth.registro');
-    }
-
-    public function registrar(Request $request) {
-
-        $nome = $request->input('nome', '');
-        $nome_usuario = $request->input('nome_usuario', '');
-        $email = $request->input('email', '');
-        $senha = $request->input('senha', '');
-
-        $cadastrarComoAdmin =
-            $request->has('cadastrar_como_admin')
-            && $request->input('cadastrar_como_admin') == '1';
-
-        $codigoAdmin = $request->input('codigo_admin', '');
-
-        if (
-            empty($nome)
-            || empty($nome_usuario)
-            || empty($email)
-            || empty($senha)
-        ) {
-            return redirect()->to('/registrar?erro=1');
-        }
-
-        if (Usuario::emailExiste($email)) {
-            return redirect()->to('/registrar?erro=2');
-        }
-
-        if (Usuario::nomeUsuarioExiste($nome_usuario)) {
-            return redirect()->to('/registrar?erro=4');
-        }
-
-        $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-
-        $tipo = 'cliente';
-
-        if ($cadastrarComoAdmin) {
-
-            $codigoSeguranca = 'ADMIN123';
-
-            if ($codigoAdmin !== $codigoSeguranca) {
-                return redirect()->to('/registrar?erro=5');
-            }
-
-            $tipo = 'admin';
-
-        } else {
-
-            if (Usuario::total() == 0) {
-                $tipo = 'admin';
-            }
-        }
-
-        $sucesso = Usuario::criar(
-            $nome,
-            $nome_usuario,
-            $email,
-            $senhaHash,
-            $tipo
-        );
-
-        if ($sucesso) {
-            return redirect()->to('/login?sucesso=1');
-        }
-
-        return redirect()->to('/registrar?erro=3');
-    }
-}
