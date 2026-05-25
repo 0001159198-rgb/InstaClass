@@ -37,10 +37,13 @@
                 @php 
                     $pub = (array) $pub;
                     
-                    // Validação inteligente do link da imagem dentro do escopo Blade
+                    // Validação do link da imagem
                     $imagem = (!empty($pub['url_imagem']) && $pub['url_imagem'] !== 'null' && $pub['url_imagem'] !== 'undefined') 
                         ? $pub['url_imagem'] 
                         : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop';
+                        
+                    // Tratamento de string do status (remove espaços e põe em minúsculo)
+                    $statusReal = strtolower(trim($pub['status'] ?? 'pendente'));
                 @endphp
                 <div class="card" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); contain: content;">
                     
@@ -51,8 +54,10 @@
                     
                     <div class="card-body" style="padding: 12px;">
                         <p style="margin: 0 0 8px 0; font-size: 14px; word-wrap: break-word;">{!! nl2br(e($pub['legenda'] ?? 'Sem legenda')) !!}</p>
+                        
                         <small style="color: #666;">Status: 
-                            <strong style="color: {{ ($pub['status'] ?? 'pendente') == 'aprovado' ? '#27ae60' : (($pub['status'] ?? 'pendente') == 'pendente' ? '#f39c12' : '#e74c3c') }}">
+                            {{-- CORREÇÃO: Aceita tanto 'aprovado' quanto 'aprovada' dinamicamente --}}
+                            <strong style="color: {{ ($statusReal === 'aprovado' || $statusReal === 'aprovada') ? '#27ae60' : ($statusReal === 'pendente' ? '#f39c12' : '#e74c3c') }}">
                                 {{ $pub['status'] ?? 'pendente' }}
                             </strong>
                         </small>
