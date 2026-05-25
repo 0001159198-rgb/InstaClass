@@ -67,8 +67,10 @@ class ControladorCliente extends Controller {
 
     public function listarPublicacoesUsuario($id = null) {
 
-        if (empty($id) || $id == 0) {
+        // Limpa espacos ou strings nulas enviadas por parametro
+        $id = $id ? trim($id) : null;
 
+        if (empty($id) || $id == 0 || $id === 'null') {
             $id = auth()->id();
 
             if (!$id) {
@@ -76,12 +78,14 @@ class ControladorCliente extends Controller {
             }
         }
 
-        $publicacoes = Publicacao::porUsuario($id);
-        $usuario = Usuario::buscarPorId($id);
+        // Força uma busca direta na tabela para evitar falhas de mapeamento do Eloquent
+        $usuario = Usuario::where('id', '=', $id)->first();
 
         if (!$usuario) {
-            abort(404, 'Usuário não encontrado');
+            abort(404, "Usuário com o ID [{$id}] não encontrado na tabela 'usuarios'.");
         }
+
+        $publicacoes = Publicacao::porUsuario($id);
 
         return view('cliente.perfil', compact('publicacoes', 'usuario'));
     }
@@ -97,7 +101,7 @@ class ControladorCliente extends Controller {
 
         $resultadosFinais = [];
 
-        // 1. BUSCA POR PERFIS (Abstrata ou usando @)
+        // 1. BUSCA POR PERFIS (Normal ou utilizando o prefixo @)
         if (str_starts_with($termo, '@')) {
             $nomeUsuarioBusca = ltrim($termo, '@');
             $usuariosEncontrados = Usuario::where('nome_usuario', 'LIKE', '%' . $nomeUsuarioBusca . '%')->get();
@@ -107,7 +111,7 @@ class ControladorCliente extends Controller {
                 ->get();
         }
 
-        // Formata os usuários encontrados para o padrão esperado pela view (tipo => perfil)
+        // Mapeia para a estrutura aceita no array_filter do seu blade de busca
         foreach ($usuariosEncontrados as $usr) {
             $resultadosFinais[] = [
                 'id' => $usr->id,
@@ -138,7 +142,7 @@ class ControladorCliente extends Controller {
             ];
         }
 
-        // Transforma o array unificado em uma Coleção para que o Blade consiga ler e contar
+        // Transforma o array estruturado em uma coleção compatível com a view
         $publicacoes = collect($resultadosFinais);
 
         return view('cliente.busca', compact('publicacoes'));
@@ -178,7 +182,6 @@ class ControladorCliente extends Controller {
     public function denunciarPublicacao(Request $request, $id) {
 
         $motivo = $request->input('motivo', 'Conteúdo impróprio');
-
         $gravidade = $request->input('gravidade', 'media');
 
         $resultado = Denuncia::criar(
@@ -188,7 +191,6 @@ class ControladorCliente extends Controller {
         );
 
         if ($resultado) {
-
             return redirect()->back()
                 ->with('mensagem', '✅ Denúncia enviada com sucesso!');
         }
@@ -235,7 +237,7 @@ class ControladorCliente extends Controller {
                 'usuario_tipo' => $usuario->tipo
             ]);
 
-            // REDIRECIONAMENTO COM BASE NO TIPO (CORRIGIDO AQUI)
+            // REDIRECIONAMENTO CORRETO DEPENDENDO DO PERFIL
             if ($usuario->tipo == 'admin') {
                 return redirect()->to('/admin');
             }
@@ -253,7 +255,6 @@ class ControladorCliente extends Controller {
     public function logout() {
 
         auth()->logout();
-
         session()->flush();
 
         return redirect()->to('/');
