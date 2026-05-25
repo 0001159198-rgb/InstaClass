@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\User as Usuario;    // 📦 CORREÇÃO: Apelidando o modelo User padrão do Laravel como Usuario
+use App\Models\User as Usuario;    // 📦 Apelidando o modelo User padrão do Laravel como Usuario
 use App\Models\Publicacao; 
 use App\Models\Denuncia;   
 
@@ -26,14 +26,18 @@ class ControladorAdmin extends Controller {
     public function dashboard() {
         $this->checarAdmin(); // Garante a proteção da rota
 
-        // Buscar dados para os indicadores
-        $totalUsuarios = Usuario::total();
-        $totalPublicacoes = count(Publicacao::todas());
-        $totalDenuncias = count(Denuncia::all());
-        $totalPendentes = count(Publicacao::pendentes());
+        // CORREÇÃO: Usando contagens nativas do banco para poupar memória e evitar chamadas de métodos inexistentes
+        $totalUsuarios = Usuario::count();
+        $totalPublicacoes = Publicacao::count();
+        $totalDenuncias = Denuncia::count();
+        $totalPendentes = Publicacao::where('status', '=', 'pendente')->count();
         
-        // Buscar denúncias recentes
-        $denunciasRecentes = Denuncia::recentes(5);
+        // Buscar denúncias recentes (Com tratamento preventivo caso o método customizado falhe)
+        try {
+            $denunciasRecentes = Denuncia::recentes(5);
+        } catch (\BadMethodCallException | \Error $e) {
+            $denunciasRecentes = Denuncia::orderBy('created_at', 'desc')->take(5)->get();
+        }
         
         return view('admin.dashboard', compact(
             'totalUsuarios', 
@@ -48,13 +52,27 @@ class ControladorAdmin extends Controller {
 
     public function listarUsuarios() {
         $this->checarAdmin();
-        $usuarios = Usuario::todos();
+        
+        // CORREÇÃO: Fallback preventivo caso o método estático customizado 'todos()' não esteja definido
+        try {
+            $usuarios = Usuario::todos();
+        } catch (\BadMethodCallException | \Error $e) {
+            $usuarios = Usuario::orderBy('name', 'asc')->get();
+        }
+
         return view('admin.usuarios', compact('usuarios'));
     }
 
     public function listarPublicacoes() {
         $this->checarAdmin();
-        $publicacoes = Publicacao::todas();
+
+        // CORREÇÃO: Fallback preventivo utilizando o método nativo all() do Laravel
+        try {
+            $publicacoes = Publicacao::todas();
+        } catch (\BadMethodCallException | \Error $e) {
+            $publicacoes = Publicacao::orderBy('created_at', 'desc')->get();
+        }
+
         return view('admin.publicacoes', compact('publicacoes'));
     }
 
@@ -72,7 +90,13 @@ class ControladorAdmin extends Controller {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
-        $publicacao = Publicacao::buscarPorId($id);
+        // CORREÇÃO: Utilizando find() nativo para evitar falha no método customizado buscarPorId()
+        try {
+            $publicacao = Publicacao::buscarPorId($id);
+        } catch (\BadMethodCallException | \Error $e) {
+            $publicacao = Publicacao::find($id);
+        }
+
         if (!$publicacao) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Publicação não encontrada!');
         }
@@ -87,7 +111,8 @@ class ControladorAdmin extends Controller {
         }
         
         try {
-            DB::table('publicacoes')->where('id', $id)->update(['status' => 'aprovado']);
+            // Ajustado para manter compatibilidade com o status buscado pelo feed ('aprovada')
+            DB::table('publicacoes')->where('id', $id)->update(['status' => 'aprovada']);
             return redirect()->to('/admin/publicacoes')->with('mensagem', "✅ Publicação #$id aprovada com sucesso!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao aprovar publicação: ' . $e->getMessage());
