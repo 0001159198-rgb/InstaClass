@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Publicacao; // Mantido apenas uma vez para corrigir o erro
+use App\Models\Publicacao; 
 use App\Models\User as Usuario;
 use App\Models\Curtida;
 use App\Models\Denuncia;
@@ -88,11 +88,58 @@ class ControladorCliente extends Controller {
 
     public function buscarPublicacoes(Request $request) {
 
-        $termo = $request->input('q', '');
+        $termo = trim($request->input('q', ''));
 
-        $publicacoes = empty($termo)
-            ? []
-            : Publicacao::buscar($termo);
+        if (empty($termo)) {
+            $publicacoes = [];
+            return view('cliente.busca', compact('publicacoes'));
+        }
+
+        $resultadosFinais = [];
+
+        // 1. BUSCA POR PERFIS (Abstrata ou usando @)
+        if (str_starts_with($termo, '@')) {
+            $nomeUsuarioBusca = ltrim($termo, '@');
+            $usuariosEncontrados = Usuario::where('nome_usuario', 'LIKE', '%' . $nomeUsuarioBusca . '%')->get();
+        } else {
+            $usuariosEncontrados = Usuario::where('nome', 'LIKE', '%' . $termo . '%')
+                ->orWhere('nome_usuario', 'LIKE', '%' . $termo . '%')
+                ->get();
+        }
+
+        // Formata os usuários encontrados para o padrão esperado pela view (tipo => perfil)
+        foreach ($usuariosEncontrados as $usr) {
+            $resultadosFinais[] = [
+                'id' => $usr->id,
+                'nome' => $usr->nome,
+                'nome_usuario' => $usr->nome_usuario,
+                'email' => $usr->email,
+                'tipo' => 'perfil' 
+            ];
+        }
+
+        // 2. BUSCA POR PUBLICAÇÕES
+        $postsEncontrados = Publicacao::where('legenda', 'LIKE', '%' . $termo . '%')
+            ->where('status', 'aprovada')
+            ->get();
+
+        foreach ($postsEncontrados as $post) {
+            $autor = $post->usuario; 
+
+            $resultadosFinais[] = [
+                'id' => $post->id,
+                'usuario_id' => $post->usuario_id,
+                'legenda' => $post->legenda,
+                'url_imagem' => $post->url_imagem,
+                'criado_em' => $post->created_at,
+                'autor_nome' => $autor ? $autor->nome : 'Usuário',
+                'nome_usuario' => $autor ? $autor->nome_usuario : 'usuario',
+                'total_curtidas' => 0 
+            ];
+        }
+
+        // Transforma o array unificado em uma Coleção para que o Blade consiga ler e contar
+        $publicacoes = collect($resultadosFinais);
 
         return view('cliente.busca', compact('publicacoes'));
     }
@@ -197,8 +244,7 @@ class ControladorCliente extends Controller {
             }
 
             return ($usuario->tipo == 'admin')
-                ? redirect()->to('/admin')
-                : redirect()->to('/feed');
+                ->with('mensagem', '❌ Erro ao criar publicação!');
         }
 
         return redirect()->to(
