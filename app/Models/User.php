@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory; // Adicionado para dar suporte total às Seeds
+use Illuminate\Database\Eloquent\Factories\HasFactory; // Suporte para as Seeds
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
-    use HasFactory; // Adicionado para garantir o funcionamento correto de fábricas e seeders
+    use HasFactory; // Garante o funcionamento correto de fábricas e seeders
 
     protected $table = 'usuarios';
 
@@ -31,13 +31,25 @@ class User extends Authenticatable
         return $this->senha;
     }
 
+    // =========================================================
+    // RELACIONAMENTOS (🚨 CRÍTICO: Resolve falhas de perfil/posts)
+    // =========================================================
+
+    /**
+     * Relacionamento: Um Usuário possui muitas Publicações.
+     */
+    public function publicacoes()
+    {
+        return $this->hasMany(Publicacao::class, 'usuario_id');
+    }
+
     // =========================
     // BUSCAS
     // =========================
 
     public static function buscarPorEmail($email)
     {
-        return self::where('email', $email)->first();
+        return self::where('email', trim($email))->first();
     }
 
     public static function buscarPorId($id)
@@ -47,12 +59,12 @@ class User extends Authenticatable
 
     public static function emailExiste($email)
     {
-        return self::where('email', $email)->exists();
+        return self::where('email', trim($email))->exists();
     }
 
     public static function nomeUsuarioExiste($nome_usuario)
     {
-        return self::where('nome_usuario', $nome_usuario)->exists();
+        return self::where('nome_usuario', trim($nome_usuario))->exists();
     }
 
     public static function total()
@@ -62,7 +74,7 @@ class User extends Authenticatable
 
     public static function todos()
     {
-        return self::all();
+        return self::orderBy('nome', 'asc')->get();
     }
 
     // =========================
@@ -72,9 +84,9 @@ class User extends Authenticatable
     public static function criar($nome, $nome_usuario, $email, $senhaHash, $tipo)
     {
         return self::create([
-            'nome' => $nome,
-            'nome_usuario' => $nome_usuario,
-            'email' => $email,
+            'nome' => trim($nome),
+            'nome_usuario' => trim($nome_usuario),
+            'email' => trim($email),
             'senha' => $senhaHash,
             'tipo' => $tipo
         ]);
