@@ -33,6 +33,9 @@ RUN a2enmod rewrite
 # Config Apache
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
+# REMOVE CACHE ANTIGO DO LARAVEL
+RUN rm -f bootstrap/cache/*.php
+
 EXPOSE 80
 
 CMD bash -c "php artisan config:clear && php artisan cache:clear && php artisan optimize:clear && php artisan migrate --force && apache2-foreground"
