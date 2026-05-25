@@ -2,10 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Model
+class User extends Authenticatable
 {
     protected $table = 'usuarios';
 
@@ -19,38 +18,48 @@ class User extends Model
         'tipo'
     ];
 
+    protected $hidden = [
+        'senha'
+    ];
+
+    // Informa ao Laravel que a senha está no campo "senha"
+    public function getAuthPassword()
+    {
+        return $this->senha;
+    }
+
     // =========================
     // BUSCAS
     // =========================
 
     public static function buscarPorEmail($email)
     {
-        return DB::table('usuarios')->where('email', $email)->first();
+        return self::where('email', $email)->first();
     }
 
     public static function buscarPorId($id)
     {
-        return DB::table('usuarios')->where('id', $id)->first();
+        return self::find($id);
     }
 
     public static function emailExiste($email)
     {
-        return DB::table('usuarios')->where('email', $email)->exists();
+        return self::where('email', $email)->exists();
     }
 
     public static function nomeUsuarioExiste($nome_usuario)
     {
-        return DB::table('usuarios')->where('nome_usuario', $nome_usuario)->exists();
+        return self::where('nome_usuario', $nome_usuario)->exists();
     }
 
     public static function total()
     {
-        return DB::table('usuarios')->count();
+        return self::count();
     }
 
     public static function todos()
     {
-        return DB::table('usuarios')->get();
+        return self::all();
     }
 
     // =========================
@@ -59,7 +68,7 @@ class User extends Model
 
     public static function criar($nome, $nome_usuario, $email, $senhaHash, $tipo)
     {
-        return DB::table('usuarios')->insert([
+        return self::create([
             'nome' => $nome,
             'nome_usuario' => $nome_usuario,
             'email' => $email,
