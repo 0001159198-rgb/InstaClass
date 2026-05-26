@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Publicacao; 
 use App\Models\User as Usuario;
-use App\Models\Curtida;
-use App\Models\Denuncia;
 use Illuminate\Support\Facades\DB;
 
 class ControladorCliente extends Controller {
@@ -188,41 +186,72 @@ class ControladorCliente extends Controller {
     // ================== CURTIDAS ==================
 
     public function curtirPublicacao($id) {
-
         $usuario_id = auth()->id() ?? session('usuario_id');
 
         if (!$usuario_id) {
             return redirect()->to('/login')->with('erro', 'Faça login para curtir.');
         }
 
-        Curtida::toggleCurtida($usuario_id, $id);
+        // 🔥 CORREÇÃO DEFINITIVA: Executa usando Query Builder puro, eliminando "Class Curtida not found"
+        $jaCurtiu = DB::table('curtidas')
+            ->where('usuario_id', $usuario_id)
+            ->where('publicacao_id', $id)
+            ->exists();
+
+        if ($jaCurtiu) {
+            DB::table('curtidas')
+                ->where('usuario_id', $usuario_id)
+                ->where('publicacao_id', $id)
+                ->delete();
+        } else {
+            DB::table('curtidas')->insert([
+                'usuario_id' => $usuario_id,
+                'publicacao_id' => $id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
 
         return redirect()->back();
     }
 
     public function minhasCurtidas() {
-
         $usuario_id = auth()->id() ?? session('usuario_id');
 
         if (!$usuario_id) {
             return redirect()->to('/login');
         }
 
-        $publicacoes = Curtida::getPublicacoesCurtidas($usuario_id);
-        $totalCurtidas = Curtida::countCurtidas($usuario_id);
+        // Busca as publicações curtidas cruzando com dados dos autores de forma limpa
+        $publicacoes = DB::table('curtidas')
+            ->join('publicacoes', 'curtidas.publicacao_id', '=', 'publicacoes.id')
+            ->join('usuarios', 'publicacoes.usuario_id', '=', 'usuarios.id')
+            ->select('publicacoes.*', 'usuarios.nome as autor_nome', 'usuarios.nome_usuario as autor_username')
+            ->where('curtidas.usuario_id', '=', $usuario_id)
+            ->where('publicacoes.status', '=', 'aprovada')
+            ->get();
+
+        $totalCurtidas = count($publicacoes);
+
+        foreach ($publicacoes as $pub) {
+            $pub->total_curtidas = DB::table('curtidas')->where('publicacao_id', $pub->id)->count();
+            $pub->ja_curtiu = true; 
+        }
 
         return view('cliente.curtidas', compact('publicacoes', 'totalCurtidas'));
     }
 
     public function descurtirPublicacao($id) {
-
         $usuario_id = auth()->id() ?? session('usuario_id');
 
         if (!$usuario_id) {
             return redirect()->to('/login');
         }
 
-        Curtida::descurtir($usuario_id, $id);
+        DB::table('curtidas')
+            ->where('usuario_id', $usuario_id)
+            ->where('publicacao_id', $id)
+            ->delete();
 
         return redirect()->back();
     }
@@ -230,23 +259,34 @@ class ControladorCliente extends Controller {
     // ================== DENÚNCIAS ==================
 
     public function denunciarPublicacao(Request $request, $id) {
-
+        $usuario_id = auth()->id() ?? session('usuario_id') ?? 0;
         $motivo = $request->input('motivo', 'Conteúdo impróprio');
         $gravidade = $request->input('gravidade', 'media');
 
-        $resultado = Denuncia::criar(
-            $id,
-            $motivo,
-            $gravidade
-        );
+        $jaDenunciou = DB::table('denuncias')
+            ->where('publicacao_id', $id)
+            ->where('usuario_id', $usuario_id)
+            ->exists();
 
-        if ($resultado) {
-            return redirect()->back()
-                ->with('mensagem', '✅ Denúncia enviada com sucesso!');
+        if ($jaDenunciou && $usuario_id != 0) {
+            return redirect()->back()->with('erro', '❌ Você já denunciou esta publicação.');
         }
 
-        return redirect()->back()
-            ->with('erro', '❌ Você já denunciou esta publicação.');
+        // 🔥 CORREÇÃO DEFINITIVA: Salvando denúncias via Query Builder direto na tabela
+        $resultado = DB::table('denuncias')->insert([
+            'publicacao_id' => $id,
+            'usuario_id' => $usuario_id,
+            'motivo' => $motivo,
+            'gravidade' => $gravidade,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        if ($resultado) {
+            return redirect()->back()->with('mensagem', '✅ Denúncia enviada com sucesso!');
+        }
+
+        return redirect()->back()->with('erro', '❌ Erro ao enviar denúncia.');
     }
 
     // ================== LOGIN ==================
@@ -346,7 +386,6 @@ class ControladorCliente extends Controller {
         $sucesso = Usuario::criar($nome, $nome_usuario, $email, $senhaHash, $tipo);
 
         if ($sucesso) {
-            // Força a limpeza antes de mover para o login para evitar conflito de cookies
             auth()->logout();
             session()->flush();
             return redirect()->to('/login?sucesso=1');
