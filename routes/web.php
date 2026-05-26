@@ -48,5 +48,18 @@ Route::prefix('admin')->group(function () {
     Route::any('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao'])->where('id', '[0-9]+');
     Route::any('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao'])->where('id', '[0-9]+');
 
-    // Rota de processamento da análise de denúncias
-    Route::any('/denuncias/{id}/analisar',
+    // 🔥 FIX: Sintaxe da linha de análise fechada perfeitamente agora!
+    Route::any('/denuncias/{id}/analisar', [ControladorAdmin::class, 'analisarDenuncia'])->where('id', '[0-9]+');
+});
+
+
+// ================== UTILITÁRIOS DE SISTEMA ==================
+Route::get('/clear-cache', function () {
+    // Força a limpeza absoluta de caches físicos no servidor Render
+    Artisan::call('route:clear');
+    Artisan::call('view:clear');
+    Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    
+    return "🧹 Todos os caches do Laravel (Rotas, Views e Configurações) foram destruídos com sucesso!";
+});
