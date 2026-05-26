@@ -260,6 +260,8 @@ class ControladorCliente extends Controller {
 
     public function denunciarPublicacao(Request $request, $id) {
         $usuario_id = auth()->id() ?? session('usuario_id') ?? 0;
+        
+        // Captura os dados dinâmicos enviados pelo novo Modal HTML/JS
         $motivo = $request->input('motivo', 'Conteúdo impróprio');
         $gravidade = $request->input('gravidade', 'media');
 
@@ -272,7 +274,7 @@ class ControladorCliente extends Controller {
             return redirect()->back()->with('erro', '❌ Você já denunciou esta publicação.');
         }
 
-        // 🔥 CORREÇÃO DEFINITIVA: Salvando denúncias via Query Builder direto na tabela
+        // 🔥 Salvando denúncias via Query Builder direto na tabela
         $resultado = DB::table('denuncias')->insert([
             'publicacao_id' => $id,
             'usuario_id' => $usuario_id,
