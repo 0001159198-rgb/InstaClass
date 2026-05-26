@@ -17,19 +17,19 @@ Route::get('/', [ControladorCliente::class, 'welcome']);
 Route::get('/feed', [ControladorCliente::class, 'inicio']);
 Route::get('/buscar', [ControladorCliente::class, 'buscarPublicacoes']);
 
-// CORREÇÃO: Rota de Perfil flexível (Aceita /perfil ou /perfil/9) protegendo contra 404 automáticos
+// Rota de Perfil flexível (Aceita /perfil ou /perfil/9) protegendo contra 404 automáticos
 Route::get('/perfil/{id?}', [ControladorCliente::class, 'listarPublicacoesUsuario'])->where('id', '[0-9]+');
 
-// CORREÇÃO: Rotas para criação de publicações com mapeamento isolado para não quebrar o CSS
+// Rotas para criação de publicações com mapeamento isolado para não quebrar o CSS
 Route::get('/publicacoes/criar', [ControladorCliente::class, 'criarPublicacao']);
 Route::post('/publicacoes/salvar', [ControladorCliente::class, 'salvarPublicacao']);
 
-// CORREÇÃO: Rotas de interações (Curtidas e Denúncias)
+// Rotas de interações (Curtidas e Denúncias)
 Route::get('/publicacoes/{id}/curtir', [ControladorCliente::class, 'curtirPublicacao']);
 Route::get('/publicacoes/{id}/descurtir', [ControladorCliente::class, 'descurtirPublicacao']);
 Route::post('/publicacoes/{id}/denunciar', [ControladorCliente::class, 'denunciarPublicacao']);
 
-// CORREÇÃO: Rota de listagem das curtidas do utilizador logado com redirecionamento amigável
+// Rota de listagem das curtidas do utilizador logado com redirecionamento amigável
 Route::get('/minhas-curtidas', [ControladorCliente::class, 'minhasCurtidas']);
 Route::redirect('/curtidas', '/minhas-curtidas');
 
