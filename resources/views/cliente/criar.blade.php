@@ -1,54 +1,55 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nova Publicação - InstaClass</title>
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-</head>
-<body>
-    <div class="header">
-        <h1>📷 Nova Publicação</h1>
-    </div>
-    <div class="container">
-        <div class="card">
-            
-            {{-- Mensagem de Erro Gerenciada pelo Laravel --}}
-            @if (session('erro'))
-                <div class="erro-flash">
-                    {{ session('erro') }}
-                </div>
-            @endif
-            
-            {{-- Mensagem de Sucesso Gerenciada pelo Laravel --}}
-            @if (session('mensagem'))
-                <div class="mensagem-flash">
-                    {{ session('mensagem') }}
-                </div>
-            @endif
-            
-            <form method="POST" action="{{ url('/publicacoes/salvar') }}">
-                @csrf {{-- Proteção obrigatória para envio de formulários POST --}}
-                
-                <div class="form-group">
-                    <label>📝 Legenda</label>
-                    <textarea name="legenda" placeholder="O que você está pensando? Use @ para mencionar alguém..." required>{{ old('legenda') }}</textarea>
-                    <div class="dica">💡 Dica: Use @nome_usuario para mencionar alguém</div>
-                </div>
-                
-                <div class="form-group">
-                    <label>🖼️ URL da imagem (opcional)</label>
-                    <input type="url" name="url_imagem" value="{{ old('url_imagem') }}" placeholder="https://exemplo.com/imagem.jpg">
-                    <div class="dica">📷 Cole o link de uma imagem da internet</div>
-                </div>
-                
-                <button type="submit">📤 Publicar</button>
-            </form>
-            
-            <div class="back">
-                <a href="{{ url('/feed') }}">← Voltar ao feed</a>
+@include('layouts.header')
+
+<div class="container" style="max-width: 600px; margin: 40px auto; padding: 20px;">
+    
+    <div class="card-criar" style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        
+        <h2 style="margin-top: 0; margin-bottom: 25px; color: #333; display: flex; align-items: center; gap: 10px;">
+            📷 Nova Publicação
+        </h2>
+
+        {{-- Exibição de Mensagens de Erro --}}
+        @if(session('erro'))
+            <div style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
+                {{ session('erro') }}
             </div>
+        @endif
+
+        <form action="{{ url('/publicacoes/salvar') }}" method="POST">
+            @csrf
+
+            {{-- Campo da Legenda --}}
+            <div style="margin-bottom: 20px;">
+                <label for="legenda" style="display: block; font-weight: bold; margin-bottom: 8px; color: #555;">
+                    📝 Legenda
+                </label>
+                <textarea id="legenda" name="legenda" rows="4" placeholder="O que você está pensando? Use @ para mencionar alguém..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 15px; resize: vertical; box-sizing: border-box;" required></textarea>
+                <small style="color: #888; display: block; margin-top: 4px;">Dica: Use @nome_usuario para mencionar alguém</small>
+            </div>
+
+            {{-- Campo da Imagem --}}
+            <div style="margin-bottom: 25px;">
+                <label for="url_imagem" style="display: block; font-weight: bold; margin-bottom: 8px; color: #555;">
+                    🖼️ URL da Imagem (opcional)
+                </label>
+                <input type="url" id="url_imagem" name="url_imagem" placeholder="https://exemplo.com/sua-imagem.jpg" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; box-sizing: border-box;">
+                <small style="color: #888; display: block; margin-top: 4px;">Cole o link de uma imagem válida da internet</small>
+            </div>
+
+            {{-- Botão de Enviar --}}
+            <button type="submit" style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: opacity 0.2s;">
+                📥 Publicar
+            </button>
+        </form>
+
+        {{-- Link de Voltar --}}
+        <div style="margin-top: 20px; text-align: center;">
+            <a href="{{ url('/feed') }}" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">
+                ← Voltar ao feed
+            </a>
         </div>
+
     </div>
-</body>
-</html>
+</div>
+
+@include('layouts.footer')
