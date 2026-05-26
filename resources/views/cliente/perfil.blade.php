@@ -1,79 +1,91 @@
 @include('layouts.header')
 
-<div class="container" style="max-width: 800px; margin: 0 auto; padding: 20px;">
-    
-    {{-- Header do perfil do usuário --}}
-    @if (isset($usuario) && !empty($usuario))
-        @php $usuario = (array) $usuario; @endphp
-        <div class="perfil-header" style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); contain: content;">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; flex-shrink: 0;">
-                    {{ strtoupper(substr($usuario['nome'] ?? 'U', 0, 1)) }}
-                </div>
-                <div>
-                    <h2 style="margin: 0 0 5px 0;">{{ $usuario['nome'] ?? 'Usuário' }}</h2>
-                    <p style="margin: 0; color: #666;">@{{ $usuario['nome_usuario'] ?? 'usuario' }}</p>
-                    <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">📧 {{ $usuario['email'] ?? '' }}</p>
-                </div>
-            </div>
+<div class="container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+
+    {{-- Mensagens de Feedback --}}
+    @if(session('mensagem'))
+        <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #c3e6cb; font-weight: 500; font-size: 14px;">
+            {{ session('mensagem') }}
         </div>
     @endif
 
-    <h3 style="margin-bottom: 15px;">📷 Publicações</h3>
-    <hr style="margin-bottom: 20px;">
-
-    {{-- Renderização da listagem de posts --}}
-    @if (!isset($publicacoes))
-        <div class="alert alert-warning" style="background: #fff3cd; color: #856404; padding: 12px; border-radius: 5px;">
-            ⚠️ Nenhuma publicação encontrada.
+    {{-- Cabeçalho do Perfil --}}
+    <div style="background: white; padding: 30px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #eef0f2; text-align: center;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; color: white; font-weight: bold; margin: 0 auto 15px auto;">
+            {{ strtoupper(substr($usuario->nome ?? 'U', 0, 1)) }}
         </div>
-    @elseif (empty($publicacoes) || count($publicacoes) === 0)
-        <div class="alert alert-info" style="background: #d1ecf1; color: #0c5460; padding: 12px; border-radius: 5px;">
-            📭 Este usuário ainda não tem publicações.
+        
+        {{-- 🔥 CORREÇÃO: Mudado de colchetes para seta (->) --}}
+        <h2 style="margin: 0; color: #333; font-size: 22px;">{{ $usuario->nome ?? 'Usuário' }}</h2>
+        <p style="margin: 5px 0 15px 0; color: #888; font-size: 14px;">@{!! $usuario->nome_usuario ?? 'usuario' !!}</p>
+        
+        <div style="display: flex; justify-content: center; gap: 20px; border-top: 1px solid #f1f2f4; padding-top: 15px;">
+            <span style="font-size: 14px; color: #555;">📸 <strong>{{ count($publicacoes) }}</strong> {{ count($publicacoes) == 1 ? 'publicação' : 'publicações' }}</span>
+        </div>
+    </div>
+
+    <h3 style="color: #444; font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; gap: 6px;">📸 Publicações</h3>
+
+    {{-- Se o usuário não tiver posts --}}
+    @if (count($publicacoes) === 0)
+        <div style="background: white; border-radius: 12px; padding: 40px 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #eef0f2;">
+            <p style="margin: 0 0 15px 0; color: #777; font-size: 14px;">Este usuário ainda não fez nenhuma publicação.</p>
+            @if(auth()->id() == $usuario->id)
+                <a href="{{ url('/publicacoes/criar') }}" style="display: inline-block; background: #667eea; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px;">
+                    Criar Nova Publicação
+                </a>
+            @endif
         </div>
     @else
-        <div class="grid-publicacoes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; min-height: 200px;">
+        {{-- Grade/Lista de Publicações --}}
+        <div class="feed-lista" style="display: flex; flex-direction: column; gap: 25px;">
             @foreach ($publicacoes as $pub)
                 @php 
-                    $pub = (array) $pub;
+                    // Fallback se a imagem falhar ou vier nula
+                    $imagem = (!empty($pub->url_imagem) && $pub->url_imagem !== 'null') 
+                        ? $pub->url_imagem 
+                        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
                     
-                    // Validação do link da imagem
-                    $imagem = (!empty($pub['url_imagem']) && $pub['url_imagem'] !== 'null' && $pub['url_imagem'] !== 'undefined') 
-                        ? $pub['url_imagem'] 
-                        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop';
-                        
-                    // Tratamento de string do status (remove espaços e põe em minúsculo)
-                    $statusReal = strtolower(trim($pub['status'] ?? 'pendente'));
+                    // Define a cor da etiqueta de status
+                    $statusCor = ($pub->status ?? 'pendente') === 'aprovada' ? '#2ecc71' : '#f39c12';
                 @endphp
-                <div class="card" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); contain: content;">
+
+                <div class="card-post" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #eef0f2;">
                     
-                    <img src="{{ $imagem }}" 
-                         alt="Publicação" 
-                         style="width: 100%; height: 250px; object-fit: cover; display: block;"
-                         onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop';">
-                    
-                    <div class="card-body" style="padding: 12px;">
-                        <p style="margin: 0 0 8px 0; font-size: 14px; word-wrap: break-word;">{!! nl2br(e($pub['legenda'] ?? 'Sem legenda')) !!}</p>
-                        
-                        <small style="color: #666;">Status: 
-                            {{-- CORREÇÃO: Aceita tanto 'aprovado' quanto 'aprovada' dinamicamente --}}
-                            <strong style="color: {{ ($statusReal === 'aprovado' || $statusReal === 'aprovada') ? '#27ae60' : ($statusReal === 'pendente' ? '#f39c12' : '#e74c3c') }}">
-                                {{ $pub['status'] ?? 'pendente' }}
-                            </strong>
-                        </small>
-                        <br>
-                        <small style="color: #888;">❤️ {{ $pub['total_curtidas'] ?? 0 }} curtidas</small>
+                    {{-- Imagem do Post --}}
+                    <div style="background: #fdfdfd; width: 100%; text-align: center;">
+                        <img src="{{ $imagem }}" style="width: 100%; max-height: 450px; object-fit: cover; display: block; margin: 0 auto;">
                     </div>
+                    
+                    {{-- Conteúdo e Legenda --}}
+                    <div class="card-body" style="padding: 15px;">
+                        
+                        {{-- 🔥 CORREÇÃO: Mudado para ler o objeto $pub->legenda de forma segura --}}
+                        <p style="margin: 0 0 12px 0; font-size: 14px; color: #222; line-height: 1.5;">
+                            <strong>{{ $usuario->nome_usuario ?? 'usuario' }}</strong> 
+                            @if(!empty($pub->legenda))
+                                {!! nl2br(e($pub->legenda)) !!}
+                            @else
+                                <span style="color: #bbb; font-style: italic;">Sem legenda</span>
+                            @endif
+                        </p>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f8f9fa; padding-top: 10px; margin-top: 10px;">
+                            <span style="font-size: 12px; font-weight: bold; color: white; background: {{ $statusCor }}; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">
+                                Status: {{ $pub->status ?? 'pendente' }}
+                            </span>
+
+                            <span style="color: #777; font-size: 13px; font-weight: 500;">
+                                ❤️ {{ $pub->total_curtidas ?? 0 }} {{ ($pub->total_curtidas ?? 0) == 1 ? 'curtida' : 'curtidas' }}
+                            </span>
+                        </div>
+                    </div>
+
                 </div>
             @endforeach
         </div>
     @endif
-    
-    <div style="margin-top: 30px; text-align: center;">
-        <a href="{{ url('/feed') }}" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none;">
-            ← Voltar ao Feed
-        </a>
-    </div>
+
 </div>
 
 @include('layouts.footer')
