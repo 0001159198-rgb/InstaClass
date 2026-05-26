@@ -12,7 +12,7 @@
                 <label>Autor:</label>
                 <p>
                     <strong>{{ $publicacao->usuario->nome ?? 'Usuário' }}</strong> 
-                    (<span style="color: #8e8e8e;">{{ '@' . ($publicacao->usuario->nome_usuario ?? 'usuario') }}</span>)
+                    <span style="color: #8e8e8e;">{{ '@' . ($publicacao->usuario->nome_usuario ?? 'usuario') }}</span>
                 </p>
             </div>
             
@@ -24,7 +24,8 @@
             <div class="info-group">
                 <label>Status:</label>
                 <p>
-                    <span class="status status-{{ $publicacao->status ?? 'pendente' }}">
+                    {{-- 🔥 AJUSTE: Garante compatibilidade tanto com 'aprovada/bloqueada' quanto 'aprovado/bloqueado' --}}
+                    <span class="status status-{{ str_replace('a', 'o', strtolower($publicacao->status ?? 'pendente')) }}">
                         {{ ucfirst($publicacao->status ?? 'Pendente') }}
                     </span>
                 </p>
@@ -48,18 +49,19 @@
             
             <div class="info-group">
                 <label>Curtidas:</label>
-                {{-- 🔥 CORREÇÃO: Lê o atributo direto sem invocar método inexistente no Model --}}
                 <p>❤️ {{ $publicacao->total_curtidas ?? ($publicacao->curtidas_count ?? 0) }} curtidas</p>
             </div>
             
             <div class="acoes">
-                @if (($publicacao->status ?? 'pendente') != 'aprovado')
+                {{-- 🔥 AJUSTE DE STRING: Verifica tanto 'aprovado' quanto 'aprovada' --}}
+                @if (!str_contains(strtolower($publicacao->status ?? ''), 'aprovad'))
                     <a href="{{ url('/admin/publicacoes/' . $publicacao->id . '/aprovar') }}" class="btn-link-acao btn-aprovar">
                         ✅ Aprovar
                     </a>
                 @endif
                 
-                @if (($publicacao->status ?? 'pendente') != 'bloqueado')
+                {{-- 🔥 AJUSTE DE STRING: Verifica tanto 'bloqueado' quanto 'bloqueada' --}}
+                @if (!str_contains(strtolower($publicacao->status ?? ''), 'bloquead'))
                     <a href="{{ url('/admin/publicacoes/' . $publicacao->id . '/bloquear') }}" class="btn-link-acao btn-bloquear">
                         🚫 Bloquear
                     </a>
@@ -78,11 +80,12 @@
     max-width: 800px;
     margin: 40px auto;
     padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 .card {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Sombra levemente mais suave e moderna */
     overflow: hidden;
 }
 .card-header {
@@ -96,6 +99,7 @@
 .card-header h2 {
     margin: 0;
     font-size: 20px;
+    color: #333;
 }
 .btn-voltar {
     background: #6c757d;
@@ -104,9 +108,14 @@
     border-radius: 6px;
     text-decoration: none;
     font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.btn-voltar:hover {
+    background: #5a6268;
 }
 .card-body {
-    padding: 20px;
+    padding: 24px;
 }
 .info-group {
     margin-bottom: 20px;
@@ -119,6 +128,8 @@
     color: #666;
     margin-bottom: 8px;
     font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 .info-group p {
     margin: 0;
@@ -130,47 +141,64 @@
     padding: 15px;
     border-radius: 8px;
     font-size: 15px;
-    line-height: 1.5;
+    line-height: 1.6;
+    color: #333;
+    border: 1px solid #eee;
+}
+.imagem-box {
+    margin-top: 10px;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    display: inline-block;
 }
 .imagem-detalhe {
     max-width: 100%;
-    max-height: 400px;
-    border-radius: 8px;
+    max-height: 450px;
+    border-radius: 6px;
+    display: block;
 }
 .status {
-    padding: 4px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    display: inline-block;
 }
-.status-aprovado { background: #d4edda; color: #155724; }
-.status-pendente { background: #fff3cd; color: #856404; }
-.status-bloqueado { background: #f8d7da; color: #721c24; }
+/* Suporte às duas variações de escrita de status */
+.status-aprovado, .status-aprovada { background: #d4edda; color: #155724; }
+.status-pendente, .status-pendente { background: #fff3cd; color: #856404; }
+.status-bloqueado, .status-bloqueada { background: #f8d7da; color: #721c24; }
 
 .acoes {
     display: flex;
-    gap: 10px;
-    margin-top: 20px;
+    gap: 12px;
+    margin-top: 24px;
     padding-top: 20px;
     border-top: 1px solid #efefef;
 }
 .btn-link-acao {
-    display: inline-block;
-    padding: 10px 20px;
+    flex: 1; /* Faz com que os botões dividam o espaço de forma limpa na tela cheia */
+    max-width: 180px;
+    padding: 12px 20px;
     border-radius: 6px;
-    font-weight: 500;
+    font-weight: bold;
     font-size: 14px;
     text-decoration: none;
     text-align: center;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 .btn-link-acao:hover {
-    opacity: 0.85;
+    transform: translateY(-1px);
 }
-.btn-aprovar { background: #28a745; color: white; }
-.btn-bloquear { background: #ffc107; color: #333; }
-.btn-excluir { background: #dc3545; color: white; }
+.btn-aprovar { background: #28a745; color: white; box-shadow: 0 2px 4px rgba(40,167,69,0.2); }
+.btn-bloquear { background: #ffc107; color: #212529; box-shadow: 0 2px 4px rgba(255,193,7,0.2); }
+.btn-excluir { background: #dc3545; color: white; box-shadow: 0 2px 4px rgba(220,53,69,0.2); }
+
+.btn-aprovar:hover { background: #218838; }
+.btn-bloquear:hover { background: #e0a800; }
+.btn-excluir:hover { background: #c82333; }
 </style>
 
 @include('layouts.footer')
