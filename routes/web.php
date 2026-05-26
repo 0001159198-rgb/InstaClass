@@ -17,7 +17,7 @@ Route::get('/', [ControladorCliente::class, 'welcome']);
 Route::get('/feed', [ControladorCliente::class, 'inicio']);
 Route::get('/buscar', [ControladorCliente::class, 'buscarPublicacoes']);
 
-// Rota de Perfil flexível (Aceita /perfil ou /perfil/9) protegendo contra 404 automáticos
+// Rota de Perfil flexível protegendo contra 404 automáticos
 Route::get('/perfil/{id?}', [ControladorCliente::class, 'listarPublicacoesUsuario'])->where('id', '[0-9]+');
 
 // Rotas para criação de publicações com mapeamento isolado para não quebrar o CSS
@@ -29,7 +29,7 @@ Route::get('/publicacoes/{id}/curtir', [ControladorCliente::class, 'curtirPublic
 Route::get('/publicacoes/{id}/descurtir', [ControladorCliente::class, 'descurtirPublicacao']);
 Route::post('/publicacoes/{id}/denunciar', [ControladorCliente::class, 'denunciarPublicacao']);
 
-// Rota de listagem das curtidas do utilizador logado com redirecionamento amigável
+// Rota de listagem das curtidas com redirecionamento amigável
 Route::get('/minhas-curtidas', [ControladorCliente::class, 'minhasCurtidas']);
 Route::redirect('/curtidas', '/minhas-curtidas');
 
@@ -41,10 +41,12 @@ Route::prefix('admin')->group(function () {
     Route::get('/denuncias', [ControladorAdmin::class, 'listarDenuncias']);
     
     Route::get('/publicacoes', [ControladorAdmin::class, 'listarPublicacoes']);
-    Route::get('/publicacoes/{id}', [ControladorAdmin::class, 'verPublicacao']);
-    Route::post('/publicacoes/{id}/aprovar', [ControladorAdmin::class, 'aprovarPublicacao']);
-    Route::post('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao']);
-    Route::post('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao']);
+    Route::get('/publicacoes/{id}', [ControladorAdmin::class, 'verPublicacao'])->where('id', '[0-9]+');
+    
+    // 🔥 CORREÇÃO: Alterado de POST para GET para os botões/links do painel funcionarem sem erro 405
+    Route::get('/publicacoes/{id}/aprovar', [ControladorAdmin::class, 'aprovarPublicacao'])->where('id', '[0-9]+');
+    Route::get('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao'])->where('id', '[0-9]+');
+    Route::get('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao'])->where('id', '[0-9]+');
 });
 
 
