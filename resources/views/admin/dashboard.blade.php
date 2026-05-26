@@ -1,4 +1,4 @@
-@include('layouts.header') {{-- Substituição do include de cabeçalho antigo --}}
+@include('layouts.header')
 
 <div class="admin-container">
     <h2>📊 Dashboard Administrativo</h2>
@@ -55,23 +55,21 @@
                 </thead>
                 <tbody>
                     @foreach ($denunciasRecentes as $den)
-                    @php 
-                        // Tratamento seguro para converter o objeto ou array do banco
-                        $denArray = (array) $den; 
-                    @php
                     <tr>
                         <td class="legenda-cell">
-                            {{ Str::limit($denArray['publicacao_legenda'] ?? '', 40, '...') }}
+                            {{-- Puxa a legenda pelo relacionamento com segurança ou exibe fallback --}}
+                            {{ Str::limit($den->publicacao->legenda ?? 'Sem legenda', 40, '...') }}
                         </td>
-                        <td>{{ $denArray['motivo'] }}</td>
+                        <td>{{ $den->motivo }}</td>
                         <td>
-                            <span class="gravidade gravidade-{{ $denArray['gravidade'] }}">
-                                {{ ucfirst($denArray['gravidade']) }}
+                            {{-- Fornece fallback caso a coluna gravidade venha nula --}}
+                            <span class="gravidade gravidade-{{ $den->gravidade ?? 'baixa' }}">
+                                {{ ucfirst($den->gravidade ?? 'Pendente') }}
                             </span>
                         </td>
-                        <td>{{ date('d/m/Y H:i', strtotime($denArray['criado_em'])) }}</td>
+                        <td>{{ date('d/m/Y H:i', strtotime($den->created_at)) }}</td>
                         <td>
-                            <a href="{{ url('/admin/publicacoes/' . $denArray['publicacao_id']) }}" class="btn-ver">Ver</a>
+                            <a href="{{ url('/admin/publicacoes/' . $den->publicacao_id) }}" class="btn-ver">Ver</a>
                         </td>
                     </tr>
                     @endforeach
@@ -316,4 +314,4 @@
 }
 </style>
 
-@include('layouts.footer') {{-- Substituição do include de rodapé antigo --}}
+@include('layouts.footer')
