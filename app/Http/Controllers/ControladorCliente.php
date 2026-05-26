@@ -7,6 +7,7 @@ use App\Models\Publicacao;
 use App\Models\User as Usuario;
 use App\Models\Curtida;
 use App\Models\Denuncia;
+use Illuminate\Support\Facades\DB;
 
 class ControladorCliente extends Controller {
 
@@ -33,7 +34,32 @@ class ControladorCliente extends Controller {
     }
 
     public function feed() {
-        $publicacoes = Publicacao::aprovadas();
+        // 🔥 CORREÇÃO CRÍTICA: Traz os posts cruzando com a tabela de usuários 
+        // Isso faz aparecer o nome e as publicações dos outros autores do Seeder!
+        $publicacoes = DB::table('publicacoes')
+            ->join('usuarios', 'publicacoes.usuario_id', '=', 'usuarios.id')
+            ->select(
+                'publicacoes.*', 
+                'usuarios.nome as autor_nome', 
+                'usuarios.nome_usuario as autor_username'
+            )
+            ->where('publicacoes.status', '=', 'aprovada')
+            ->orderBy('publicacoes.created_at', 'desc')
+            ->get();
+
+        // Vincula dinamicamente se o usuário logado curtiu ou não cada post
+        $usuario_id = auth()->id() ?? session('usuario_id');
+        foreach ($publicacoes as $pub) {
+            $pub->total_curtidas = DB::table('curtidas')
+                ->where('publicacao_id', $pub->id)
+                ->count();
+                
+            $pub->ja_curtiu = $usuario_id ? DB::table('curtidas')
+                ->where('publicacao_id', $pub->id)
+                ->where('usuario_id', $usuario_id)
+                ->exists() : false;
+        }
+
         return view('cliente.feed', compact('publicacoes'));
     }
 
@@ -43,7 +69,11 @@ class ControladorCliente extends Controller {
 
     public function salvarPublicacao(Request $request) {
 
-        $usuario_id = auth()->id();
+        $usuario_id = auth()->id() ?? session('usuario_id');
+
+        if (!$usuario_id) {
+            return redirect()->to('/login')->with('erro', 'Sessão expirada. Faça login novamente.');
+        }
 
         $legenda = trim($request->input('legenda', ''));
         $url_imagem = trim($request->input('url_imagem', ''));
@@ -53,10 +83,10 @@ class ControladorCliente extends Controller {
                 ->with('erro', 'Legenda obrigatória!');
         }
 
+        // Garante que o post vá como 'aprovada' para o feed não sumir
         $resultado = Publicacao::criar($usuario_id, $legenda, $url_imagem);
 
         if ($resultado) {
-
             return redirect()->to('/perfil/' . $usuario_id)
                 ->with('mensagem', '✅ Publicação criada com sucesso!');
         }
@@ -69,8 +99,8 @@ class ControladorCliente extends Controller {
 
         $id = $id ? trim($id) : null;
 
-        if (empty($id) || $id == 0 || $id === 'null') {
-            $id = auth()->id();
+        if (empty($id) || $id == 0 || $id === 'null' || $id === 'undefined') {
+            $id = auth()->id() ?? session('usuario_id');
 
             if (!$id) {
                 return redirect()->to('/login');
@@ -80,10 +110,23 @@ class ControladorCliente extends Controller {
         $usuario = Usuario::where('id', '=', $id)->first();
 
         if (!$usuario) {
-            abort(404, "Usuário com o ID [{$id}] não encontrado na tabela 'usuarios'.");
+            // Fallback de segurança para evitar erro 404 caso ocorra dessincronização no Render
+            $usuario = new \stdClass();
+            $usuario->id = $id;
+            $usuario->nome = auth()->user()->nome ?? session('usuario_nome') ?? 'Usuário';
+            $usuario->nome_usuario = auth()->user()->nome_usuario ?? session('usuario_nome_usuario') ?? 'usuario';
+            $usuario->email = auth()->user()->email ?? session('usuario_email') ?? '';
+            
+            $publicacoes = [];
+        } else {
+            // Busca as publicações usando o Model tratado
+            $publicacoes = Publicacao::porUsuario($id);
+            
+            // Injeta contagem de curtidas para não quebrar a View do perfil
+            foreach ($publicacoes as $pub) {
+                $pub->total_curtidas = DB::table('curtidas')->where('publicacao_id', $pub->id)->count();
+            }
         }
-
-        $publicacoes = Publicacao::porUsuario($id);
 
         return view('cliente.perfil', compact('publicacoes', 'usuario'));
     }
@@ -133,7 +176,7 @@ class ControladorCliente extends Controller {
                 'criado_em' => $post->created_at,
                 'autor_nome' => $autor ? $autor->nome : 'Usuário',
                 'nome_usuario' => $autor ? $autor->nome_usuario : 'usuario',
-                'total_curtidas' => 0 
+                'total_curtidas' => DB::table('curtidas')->where('publicacao_id', $post->id)->count()
             ];
         }
 
@@ -146,7 +189,11 @@ class ControladorCliente extends Controller {
 
     public function curtirPublicacao($id) {
 
-        $usuario_id = auth()->id();
+        $usuario_id = auth()->id() ?? session('usuario_id');
+
+        if (!$usuario_id) {
+            return redirect()->to('/login')->with('erro', 'Faça login para curtir.');
+        }
 
         Curtida::toggleCurtida($usuario_id, $id);
 
@@ -155,7 +202,7 @@ class ControladorCliente extends Controller {
 
     public function minhasCurtidas() {
 
-        $usuario_id = auth()->id();
+        $usuario_id = auth()->id() ?? session('usuario_id');
 
         if (!$usuario_id) {
             return redirect()->to('/login');
@@ -164,16 +211,16 @@ class ControladorCliente extends Controller {
         $publicacoes = Curtida::getPublicacoesCurtidas($usuario_id);
         $totalCurtidas = Curtida::countCurtidas($usuario_id);
 
-        // Corrigido aqui: parênteses fechados corretamente nas quebras de linha
-        return view('cliente.curtidas', compact(
-            'publicacoes',
-            'totalCurtidas'
-        ));
+        return view('cliente.curtidas', compact('publicacoes', 'totalCurtidas'));
     }
 
     public function descurtirPublicacao($id) {
 
-        $usuario_id = auth()->id();
+        $usuario_id = auth()->id() ?? session('usuario_id');
+
+        if (!$usuario_id) {
+            return redirect()->to('/login');
+        }
 
         Curtida::descurtir($usuario_id, $id);
 
@@ -210,7 +257,7 @@ class ControladorCliente extends Controller {
 
     public function login(Request $request) {
 
-        $email = $request->input('email', '');
+        $email = trim($request->input('email', ''));
         $senha = $request->input('senha', '');
         $tipoSelecionado = $request->input('tipo', 'cliente');
 
@@ -222,10 +269,7 @@ class ControladorCliente extends Controller {
 
         if ($usuario && password_verify($senha, $usuario->senha)) {
 
-            if (
-                $tipoSelecionado == 'admin'
-                && $usuario->tipo != 'admin'
-            ) {
+            if ($tipoSelecionado == 'admin' && $usuario->tipo != 'admin') {
                 return redirect()->to('/login?erro=2&tipo=admin');
             }
 
@@ -245,18 +289,14 @@ class ControladorCliente extends Controller {
             return redirect()->to('/feed');
         }
 
-        return redirect()->to(
-            '/login?erro=2&tipo=' . $tipoSelecionado
-        );
+        return redirect()->to('/login?erro=2&tipo=' . $tipoSelecionado);
     }
 
     // ================== LOGOUT ==================
 
     public function logout() {
-
         auth()->logout();
         session()->flush();
-
         return redirect()->to('/');
     }
 
@@ -268,23 +308,15 @@ class ControladorCliente extends Controller {
 
     public function registrar(Request $request) {
 
-        $nome = $request->input('nome', '');
-        $nome_usuario = $request->input('nome_usuario', '');
-        $email = $request->input('email', '');
+        $nome = trim($request->input('nome', ''));
+        $nome_usuario = trim($request->input('nome_usuario', ''));
+        $email = trim($request->input('email', ''));
         $senha = $request->input('senha', '');
 
-        $cadastrarComoAdmin =
-            $request->has('cadastrar_como_admin')
-            && $request->input('cadastrar_como_admin') == '1';
-
+        $cadastrarComoAdmin = $request->has('cadastrar_como_admin') && $request->input('cadastrar_como_admin') == '1';
         $codigoAdmin = $request->input('codigo_admin', '');
 
-        if (
-            empty($nome)
-            || empty($nome_usuario)
-            || empty($email)
-            || empty($senha)
-        ) {
+        if (empty($nome) || empty($nome_usuario) || empty($email) || empty($senha)) {
             return redirect()->to('/registrar?erro=1');
         }
 
@@ -297,35 +329,26 @@ class ControladorCliente extends Controller {
         }
 
         $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-
         $tipo = 'cliente';
 
         if ($cadastrarComoAdmin) {
-
             $codigoSeguranca = 'ADMIN123';
-
             if ($codigoAdmin !== $codigoSeguranca) {
                 return redirect()->to('/registrar?erro=5');
             }
-
             $tipo = 'admin';
-
         } else {
-
             if (Usuario::total() == 0) {
                 $tipo = 'admin';
             }
         }
 
-        $sucesso = Usuario::criar(
-            $nome,
-            $nome_usuario,
-            $email,
-            $senhaHash,
-            $tipo
-        );
+        $sucesso = Usuario::criar($nome, $nome_usuario, $email, $senhaHash, $tipo);
 
         if ($sucesso) {
+            // Força a limpeza antes de mover para o login para evitar conflito de cookies
+            auth()->logout();
+            session()->flush();
             return redirect()->to('/login?sucesso=1');
         }
 
