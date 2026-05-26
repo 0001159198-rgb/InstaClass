@@ -11,28 +11,34 @@ use App\Models\Denuncia;
 class ControladorAdmin extends Controller {
 
     /**
-     * Função auxiliar privada para validar se o usuário é Administrador.
-     * Evita o erro de encadeamento de middleware do construtor no Laravel 11.
+     * Valida se o usuário é Administrador utilizando a sessão e o Auth.
+     * Retorna um booleano para controle limpo do fluxo do controlador.
      */
-    private function checarAdmin() {
-        if (!auth()->check() || auth()->user()->tipo !== 'admin') {
-            redirect()->to('/login')->send();
-            exit();
+    private function eAdmin() {
+        if (!auth()->check()) {
+            return false;
         }
+        
+        $tipo = auth()->user()->tipo ?? session('usuario_tipo');
+        return $tipo === 'admin';
     }
 
     // ================== DASHBOARD ==================
 
     public function dashboard() {
-        $this->checarAdmin(); // Garante a proteção da rota
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login')->with('erro', 'Acesso restrito a administradores.');
+        }
 
-        // CORREÇÃO: Usando contagens nativas do banco para poupar memória e evitar chamadas de métodos inexistentes
+        // Contagens nativas do banco de dados eficientes
         $totalUsuarios = Usuario::count();
         $totalPublicacoes = Publicacao::count();
         $totalDenuncias = Denuncia::count();
-        $totalPendentes = Publicacao::where('status', '=', 'pendente')->count();
         
-        // Buscar denúncias recentes (Com tratamento preventivo caso o método customizado falhe)
+        // Aceita tanto 'pendente' quanto variações de caixa
+        $totalPendentes = Publicacao::whereIn('status', ['pendente', 'PENDENTE'])->count();
+        
+        // Buscar denúncias recentes com segurança
         try {
             $denunciasRecentes = Denuncia::recentes(5);
         } catch (\BadMethodCallException | \Error $e) {
@@ -51,25 +57,33 @@ class ControladorAdmin extends Controller {
     // ================== LISTAGENS ==================
 
     public function listarUsuarios() {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
         
-        // CORREÇÃO: Fallback preventivo caso o método estático customizado 'todos()' não esteja definido
         try {
             $usuarios = Usuario::todos();
         } catch (\BadMethodCallException | \Error $e) {
-            $usuarios = Usuario::orderBy('name', 'asc')->get();
+            // Fallback para buscar por nome se a coluna 'name' ou 'nome' falhar no Eloquent nativo
+            $usuarios = Usuario::orderBy('id', 'desc')->get();
         }
 
         return view('admin.usuarios', compact('usuarios'));
     }
 
     public function listarPublicacoes() {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
 
-        // CORREÇÃO: Fallback preventivo utilizando o método nativo all() do Laravel
+        // 🔥 CORREÇÃO: Traz as publicações com o nome do autor para a tabela do admin não quebrar
         try {
-            $publicacoes = Publicacao::todas();
-        } catch (\BadMethodCallException | \Error $e) {
+            $publicacoes = DB::table('publicacoes')
+                ->join('usuarios', 'publicacoes.usuario_id', '=', 'usuarios.id')
+                ->select('publicacoes.*', 'usuarios.nome as autor_nome')
+                ->orderBy('publicacoes.created_at', 'desc')
+                ->get();
+        } catch (\Exception $e) {
             $publicacoes = Publicacao::orderBy('created_at', 'desc')->get();
         }
 
@@ -77,7 +91,10 @@ class ControladorAdmin extends Controller {
     }
 
     public function listarDenuncias() {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
+        
         $denuncias = Denuncia::all();
         return view('admin.denuncias', compact('denuncias'));
     }
@@ -85,12 +102,14 @@ class ControladorAdmin extends Controller {
     // ================== AÇÕES SOBRE AS PUBLICAÇÕES ==================
 
     public function verPublicacao($id) {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
+        
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
-        // CORREÇÃO: Utilizando find() nativo para evitar falha no método customizado buscarPorId()
         try {
             $publicacao = Publicacao::buscarPorId($id);
         } catch (\BadMethodCallException | \Error $e) {
@@ -105,22 +124,28 @@ class ControladorAdmin extends Controller {
     }
 
     public function aprovarPublicacao($id) {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
+        
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
-            // Ajustado para manter compatibilidade com o status buscado pelo feed ('aprovada')
+            // Mantém compatibilidade com o status feminino buscado pelo feed ('aprovada')
             DB::table('publicacoes')->where('id', $id)->update(['status' => 'aprovada']);
-            return redirect()->to('/admin/publicacoes')->with('mensagem', "✅ Publicação #$id aprovada com sucesso!");
+            return redirect()->to('/admin/publicacoes')->with('mensagem', "✅ Publicação #$id aprovada com sucesso e liberada para o Feed!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao aprovar publicação: ' . $e->getMessage());
         }
     }
 
     public function determinarStatus($id, $status, $mensagemSucesso) {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
+        
         try {
             DB::table('publicacoes')->where('id', $id)->update(['status' => $status]);
             session()->flash('mensagem', $mensagemSucesso);
@@ -130,13 +155,17 @@ class ControladorAdmin extends Controller {
     }
 
     public function bloquearPublicacao($id) {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
+        
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
         try {
-            DB::table('publicacoes')->where('id', $id)->update(['status' => 'bloqueado']);
+            // 🔥 CORREÇÃO: Atualizado para 'bloqueada' (feminino) mantendo a padronização das strings
+            DB::table('publicacoes')->where('id', $id)->update(['status' => 'bloqueada']);
             return redirect()->to('/admin/publicacoes')->with('mensagem', "🚫 Publicação #$id bloqueada com sucesso!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao bloquear publicação: ' . $e->getMessage());
@@ -144,7 +173,10 @@ class ControladorAdmin extends Controller {
     }
 
     public function excluirPublicacao($id) {
-        $this->checarAdmin();
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login');
+        }
+        
         if (empty($id) || !is_numeric($id)) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
@@ -156,7 +188,7 @@ class ControladorAdmin extends Controller {
                 DB::table('publicacoes')->where('id', $id)->delete();
             });
             
-            return redirect()->to('/admin/publicacoes')->with('mensagem', "🗑️ Publicação #$id excluída permanentemente!");
+            return redirect()->to('/admin/publicacoes')->with('mensagem', "🗑️ Publicação #$id excluída permanentemente do sistema!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao excluir publicação: ' . $e->getMessage());
         }
