@@ -36,14 +36,13 @@ class ControladorAdmin extends Controller {
         $totalDenuncias = Denuncia::count();
         
         // 🔥 PADRONIZAÇÃO: Aceita variações masculinas e femininas de pendentes para segurança
-        $totalPendentes = Publicacao::whereIn('status', ['pendente', 'PENDENTE', 'pendente', 'PENDENTE'])->count();
+        $totalPendentes = Publicacao::whereIn('status', ['pendente', 'PENDENTE'])->count();
         
-        // Buscar denúncias recentes com segurança
-        try {
-            $denunciasRecentes = Denuncia::recentes(5);
-        } catch (\BadMethodCallException | \Error $e) {
-            $denunciasRecentes = Denuncia::orderBy('created_at', 'desc')->take(5)->get();
-        }
+        // Buscar denúncias recentes com segurança usando relacionamentos do Eloquent
+        $denunciasRecentes = Denuncia::with(['publicacao', 'usuario'])
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
         
         return view('admin.dashboard', compact(
             'totalUsuarios', 
@@ -62,10 +61,9 @@ class ControladorAdmin extends Controller {
         }
         
         try {
-            $usuarios = Usuario::todos();
-        } catch (\BadMethodCallException | \Error $e) {
-            // Fallback para buscar por nome se a coluna 'name' ou 'nome' falhar no Eloquent nativo
             $usuarios = Usuario::orderBy('id', 'desc')->get();
+        } catch (\Exception $e) {
+            $usuarios = Usuario::all();
         }
 
         return view('admin.usuarios', compact('usuarios'));
@@ -95,7 +93,11 @@ class ControladorAdmin extends Controller {
             return redirect()->to('/login');
         }
         
-        $denuncias = Denuncia::all();
+        // Carrega adiantado (Eager Loading) os relacionamentos para evitar erro de chaves na view
+        $denuncias = Denuncia::with(['publicacao', 'usuario'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return view('admin.denuncias', compact('denuncias'));
     }
 
@@ -110,11 +112,7 @@ class ControladorAdmin extends Controller {
             return redirect()->to('/admin/publicacoes')->with('erro', 'ID de publicação inválido.');
         }
         
-        try {
-            $publicacao = Publicacao::buscarPorId($id);
-        } catch (\BadMethodCallException | \Error $e) {
-            $publicacao = Publicacao::find($id);
-        }
+        $publicacao = Publicacao::find($id);
 
         if (!$publicacao) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Publicação não encontrada!');
@@ -191,6 +189,34 @@ class ControladorAdmin extends Controller {
             return redirect()->to('/admin/publicacoes')->with('mensagem', "🗑️ Publicação #$id excluída permanentemente do sistema!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao excluir publicação: ' . $e->getMessage());
+        }
+    }
+
+    // ================== AÇÕES SOBRE AS DENÚNCIAS ==================
+
+    /**
+     * ✅ MÉTODO ADICIONADO: Executa a auditoria e altera o status das denúncias no banco
+     */
+    public function analisarDenuncia($id) {
+        if (!$this->eAdmin()) {
+            return redirect()->to('/login')->with('erro', 'Acesso negado.');
+        }
+
+        if (empty($id) || !is_numeric($id)) {
+            return redirect()->back()->with('erro', 'ID de denúncia inválido.');
+        }
+
+        try {
+            // Localiza a denúncia com o Eloquent ou gera uma falha limpa controlada
+            $denuncia = Denuncia::findOrFail($id);
+            
+            // Sincroniza o status para mantê-lo resolvido/analisado
+            $denuncia->status = 'analisada';
+            $denuncia->save();
+
+            return redirect()->back()->with('mensagem', "✅ Denúncia #$id marcada como analisada com sucesso!");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('erro', 'Erro ao atualizar processamento da denúncia: ' . $e->getMessage());
         }
     }
 }
