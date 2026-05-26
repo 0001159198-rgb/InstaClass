@@ -43,28 +43,10 @@ Route::prefix('admin')->group(function () {
     Route::get('/publicacoes', [ControladorAdmin::class, 'listarPublicacoes']);
     Route::get('/publicacoes/{id}', [ControladorAdmin::class, 'verPublicacao'])->where('id', '[0-9]+');
     
-    // Links do painel administrativo via GET para evitar erro 405
-    Route::get('/publicacoes/{id}/aprovar', [ControladorAdmin::class, 'aprovarPublicacao'])->where('id', '[0-9]+');
-    Route::get('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao'])->where('id', '[0-9]+');
-    Route::get('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao'])->where('id', '[0-9]+');
+    // ✅ CORREÇÃO CRUCIAL: 'Route::any' garante suporte total a requisições GET ou POST antigas vindas da View
+    Route::any('/publicacoes/{id}/aprovar', [ControladorAdmin::class, 'aprovarPublicacao'])->where('id', '[0-9]+');
+    Route::any('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao'])->where('id', '[0-9]+');
+    Route::any('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao'])->where('id', '[0-9]+');
 
-    // ✅ ROTA ADICIONADA: Processa a análise de uma denúncia específica
-    Route::get('/denuncias/{id}/analisar', [ControladorAdmin::class, 'analisarDenuncia'])->where('id', '[0-9]+');
-});
-
-
-// ================== UTILITÁRIOS DE SISTEMA ==================
-Route::get('/clear-cache', function () {
-    Artisan::call('optimize:clear');
-    return nl2br(Artisan::output());
-});
-
-Route::get('/rodar-seed-temporario', function() {
-    try {
-        $seeder = new \Database\Seeders\DatabaseSeeder();
-        $seeder->run();
-        return "⚡ Seed executado com sucesso e novas contas de exemplo criadas!<br><br>🏁 Processo finalizado.";
-    } catch (\Exception $e) {
-        return "❌ Erro ao rodar Seed: " . $e->getMessage();
-    }
-});
+    // Rota de processamento da análise de denúncias
+    Route::any('/denuncias/{id}/analisar',
