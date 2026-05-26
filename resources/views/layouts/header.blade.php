@@ -17,12 +17,27 @@
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #fafafa; }
         .sidebar { width: 250px; position: fixed; height: 100%; border-right: 1px solid #dbdbdb; background: white; z-index: 100; display: flex; flex-direction: column; }
         .logo h2 { padding: 20px; color: #333; margin: 0; }
-        .menu-lateral { flex-grow: 1; }
+        .menu-lateral { flex-grow: 1; display: flex; flex-direction: column; }
         .menu-item { display: flex; align-items: center; padding: 12px 20px; text-decoration: none; color: #262626; transition: background 0.2s; }
         .menu-item:hover { background-color: #fafafa; }
         .menu-item span { margin-right: 12px; font-size: 1.2rem; }
-        .btn-nova { display: block; background-color: #0095f6; color: white; text-align: center; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 20px; }
+        
+        /* ✨ AJUSTE DESKTOP: Transforma o botão em item comum com destaque visual sutil */
+        .btn-nova { 
+            display: flex; 
+            align-items: center; 
+            padding: 12px 20px; 
+            text-decoration: none; 
+            color: white !important; 
+            background-color: #0095f6; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            margin: 10px 20px; 
+            transition: background 0.2s;
+        }
         .btn-nova:hover { background-color: #0077cc; }
+        .btn-nova span { margin-right: 12px; font-size: 1.2rem; }
+
         .user-info { padding: 20px; border-top: 1px solid #dbdbdb; margin-top: auto; font-size: 14px; }
         .main-content { margin-left: 250px; padding: 20px; min-height: 100vh; background: #fafafa; box-sizing: border-box; }
         
@@ -30,7 +45,7 @@
         .mobile-top-bar { display: none; }
 
         /* =======================================================
-           📱 RESOLUÇÃO DO SEU PRINT: MUDANÇAS PARA CELULAR
+           📱 RESOLUÇÃO DOS PRINTS: MUDANÇAS PARA CELULAR
            ======================================================= */
         @media (max-width: 768px) {
             /* 1. Faz o conteúdo principal ocupar 100% da largura do celular */
@@ -65,6 +80,7 @@
 
             /* Organiza os links do menu em linha horizontal */
             .menu-lateral {
+                flex-direction: row !important;
                 display: flex !important;
                 width: 100% !important;
                 justify-content: space-around !important;
@@ -72,24 +88,18 @@
                 height: 100% !important;
             }
 
-            .menu-item {
+            .menu-item, .btn-nova {
                 padding: 10px !important;
                 justify-content: center !important;
                 flex: 1 !important;
+                margin: 0 !important;
+                background: transparent !important;
             }
 
-            .menu-item span {
+            .menu-item span, .btn-nova span {
                 margin-right: 0 !important; /* Centraliza o emoji */
                 font-size: 24px !important; /* Aumenta o tamanho do ícone para o toque */
-            }
-
-            /* Estiliza o botão de "+" para ficar compacto na barra inferior */
-            .btn-nova {
-                margin: 0 !important;
-                padding: 10px !important;
-                background: transparent !important;
-                color: #262626 !important;
-                font-size: 24px !important;
+                color: #262626 !important; /* Garante cor escura no mobile */
             }
 
             /* Ativa um topo fixo discreto com o nome do app no celular */
@@ -134,11 +144,6 @@
             <span>❤️</span> <span class="menu-text">Curtidas</span>
         </a>
 
-        {{-- Botão de "+" movido para dentro do fluxo do menu para alinhar no celular --}}
-        <a href="{{ url('/publicacoes/criar') }}" class="btn-nova" title="Nova Publicação">
-            <span>➕</span> <span class="menu-text">Nova publicação</span>
-        </a>
-
         {{-- Tratamento do Perfil dinâmico baseado no Auth do Laravel --}}
         @if (auth()->check())
             <a href="{{ url('/perfil/' . auth()->id()) }}" class="menu-item">
@@ -156,6 +161,11 @@
                 <span>⚙️</span> <span class="menu-text">Admin</span>
             </a>
         @endif
+
+        {{-- 🔥 ALTERAÇÃO DE POSIÇÃO: Botão de "+" movido para a última posição do bloco de navegação --}}
+        <a href="{{ url('/publicacoes/criar') }}" class="btn-nova" title="Nova Publicação">
+            <span>➕</span> <span class="menu-text">Nova publicação</span>
+        </a>
     </nav>
 
     <div class="user-info">
