@@ -15,9 +15,12 @@
             {{ strtoupper(substr($usuario->nome ?? 'U', 0, 1)) }}
         </div>
         
-        {{-- 🔥 CORREÇÃO: Mudado de colchetes para seta (->) --}}
         <h2 style="margin: 0; color: #333; font-size: 22px;">{{ $usuario->nome ?? 'Usuário' }}</h2>
-        <p style="margin: 5px 0 15px 0; color: #888; font-size: 14px;">@{!! $usuario->nome_usuario ?? 'usuario' !!}</p>
+        
+        {{-- 🔥 CORREÇÃO INTEGRAL DA TAG QUEBRADA AQUI --}}
+        <p style="margin: 5px 0 15px 0; color: #888; font-size: 14px;">
+            <span>@</span>{{ $usuario->nome_usuario ?? 'usuario' }}
+        </p>
         
         <div style="display: flex; justify-content: center; gap: 20px; border-top: 1px solid #f1f2f4; padding-top: 15px;">
             <span style="font-size: 14px; color: #555;">📸 <strong>{{ count($publicacoes) }}</strong> {{ count($publicacoes) == 1 ? 'publicação' : 'publicações' }}</span>
@@ -30,7 +33,7 @@
     @if (count($publicacoes) === 0)
         <div style="background: white; border-radius: 12px; padding: 40px 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #eef0f2;">
             <p style="margin: 0 0 15px 0; color: #777; font-size: 14px;">Este usuário ainda não fez nenhuma publicação.</p>
-            @if(auth()->id() == $usuario->id)
+            @if(auth()->id() == ($usuario->id ?? 0))
                 <a href="{{ url('/publicacoes/criar') }}" style="display: inline-block; background: #667eea; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px;">
                     Criar Nova Publicação
                 </a>
@@ -60,7 +63,6 @@
                     {{-- Conteúdo e Legenda --}}
                     <div class="card-body" style="padding: 15px;">
                         
-                        {{-- 🔥 CORREÇÃO: Mudado para ler o objeto $pub->legenda de forma segura --}}
                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #222; line-height: 1.5;">
                             <strong>{{ $usuario->nome_usuario ?? 'usuario' }}</strong> 
                             @if(!empty($pub->legenda))
