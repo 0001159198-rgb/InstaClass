@@ -3,7 +3,6 @@
 <div class="admin-container">
     <div class="card">
         <div class="card-header">
-            {{-- Ajustado para sintaxe de objeto ->id --}}
             <h2>📷 Detalhes da Publicação #{{ $publicacao->id }}</h2>
             <a href="{{ url('/admin/publicacoes') }}" class="btn-voltar">← Voltar</a>
         </div>
@@ -11,7 +10,6 @@
         <div class="card-body">
             <div class="info-group">
                 <label>Autor:</label>
-                {{-- Acessa os dados do autor através do relacionamento 'usuario' configurado no Model --}}
                 <p>
                     <strong>{{ $publicacao->usuario->nome ?? 'Usuário' }}</strong> 
                     (<span style="color: #8e8e8e;">{{ '@' . ($publicacao->usuario->nome_usuario ?? 'usuario') }}</span>)
@@ -20,7 +18,6 @@
             
             <div class="info-group">
                 <label>Data:</label>
-                {{-- Ajustado para ler a coluna created_at padrão do Eloquent --}}
                 <p>{{ date('d/m/Y H:i:s', strtotime($publicacao->created_at)) }}</p>
             </div>
             
@@ -36,7 +33,6 @@
             <div class="info-group">
                 <label>Legenda:</label>
                 <div class="legenda-box">
-                    {{-- Renderiza quebras de linha com segurança --}}
                     {!! nl2br(e($publicacao->legenda)) !!}
                 </div>
             </div>
@@ -52,12 +48,11 @@
             
             <div class="info-group">
                 <label>Curtidas:</label>
-                {{-- Utiliza a contagem de curtidas se houver relacionamento ou fallback para 0 --}}
-                <p>❤️ {{ $publicacao->curtidas()->count() ?? 0 }} curtidas</p>
+                {{-- 🔥 CORREÇÃO: Lê o atributo direto sem invocar método inexistente no Model --}}
+                <p>❤️ {{ $publicacao->total_curtidas ?? ($publicacao->curtidas_count ?? 0) }} curtidas</p>
             </div>
             
             <div class="acoes">
-                {{-- Alterado de formulários POST para links simples GET combinando com o web.php --}}
                 @if (($publicacao->status ?? 'pendente') != 'aprovado')
                     <a href="{{ url('/admin/publicacoes/' . $publicacao->id . '/aprovar') }}" class="btn-link-acao btn-aprovar">
                         ✅ Aprovar
@@ -79,7 +74,6 @@
 </div>
 
 <style>
-/* Seu CSS original com adaptações para os novos botões baseados em tags <a> */
 .admin-container {
     max-width: 800px;
     margin: 40px auto;
@@ -160,7 +154,6 @@
     padding-top: 20px;
     border-top: 1px solid #efefef;
 }
-/* Estilização para manter as tags <a> com aparência idêntica a botões */
 .btn-link-acao {
     display: inline-block;
     padding: 10px 20px;
