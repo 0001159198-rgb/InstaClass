@@ -18,15 +18,15 @@
                 <th>Legenda</th>
                 <th>Imagem</th>
                 <th>Status</th>
-                <th>Ações</th>
+                <th style="text-align: center;">Ações</th>
             </tr>
-        </table>
         </thead>
         <tbody>
             @foreach ($publicacoes as $pub)
             @php 
                 // Garante que o item seja tratado como array ou objeto com segurança
                 $pubArray = (array) $pub; 
+                $statusLimpo = strtolower($pubArray['status'] ?? 'pendente');
             @endphp
             <tr>
                 <td>#{{ $pubArray['id'] }}</td>
@@ -40,30 +40,37 @@
                     @endif
                 </td>
                 <td>
-                    <span class="status status-{{ $pubArray['status'] }}">
+                    {{-- 🔥 AJUSTE: Mapeia dinamicamente classes para status terminados em 'o' ou 'a' --}}
+                    <span class="status status-{{ str_replace('a', 'o', $statusLimpo) }}">
                         {{ ucfirst($pubArray['status']) }}
                     </span>
                 </td>
-                <td class="actions">
-                    {{-- Mudança para botões com formulário POST para bater certinho com suas rotas --}}
-                    @if ($pubArray['status'] != 'aprovado')
-                        <form action="{{ url('/admin/publicacoes/' . $pubArray['id'] . '/aprovar') }}" method="POST" style="display:inline;">
+                <td class="actions-cell">
+                    {{-- 🔥 CONTAINER FLEXBOX: Alinha os formulários horizontalmente sem quebras --}}
+                    <div class="actions-wrapper">
+                        
+                        {{-- Botão Aprovar (Aparece se não contiver 'aprovad') --}}
+                        @if (!str_contains($statusLimpo, 'aprovad'))
+                            <form action="{{ url('/admin/publicacoes/' . $pubArray['id'] . '/aprovar') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn-aprovar">✅ Aprovar</button>
+                            </form>
+                        @endif
+                        
+                        {{-- Botão Bloquear (Aparece se não contiver 'bloquead') --}}
+                        @if (!str_contains($statusLimpo, 'bloquead'))
+                            <form action="{{ url('/admin/publicacoes/' . $pubArray['id'] . '/bloquear') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn-bloquear">🚫 Bloquear</button>
+                            </form>
+                        @endif
+                        
+                        {{-- Botão Excluir --}}
+                        <form action="{{ url('/admin/publicacoes/' . $pubArray['id'] . '/excluir') }}" method="POST" onclick="return confirm('Tem certeza?')">
                             @csrf
-                            <button type="submit" class="btn-aprovar">✅ Aprovar</button>
+                            <button type="submit" class="btn-excluir">🗑️ Excluir</button>
                         </form>
-                    @endif
-                    
-                    @if ($pubArray['status'] != 'bloqueado')
-                        <form action="{{ url('/admin/publicacoes/' . $pubArray['id'] . '/bloquear') }}" method="POST" style="display:inline;">
-                            @csrf
-                            <button type="submit" class="btn-bloquear">🚫 Bloquear</button>
-                        </form>
-                    @endif
-                    
-                    <form action="{{ url('/admin/publicacoes/' . $pubArray['id'] . '/excluir') }}" method="POST" style="display:inline;" onclick="return confirm('Tem certeza?')">
-                        @csrf
-                        <button type="submit" class="btn-excluir">🗑️ Excluir</button>
-                    </form>
+                    </div>
                 </td>
             </tr>
             @endforeach
@@ -72,11 +79,12 @@
 </div>
 
 <style>
-/* Mantido seu CSS original e adicionados pequenos ajustes para alinhar os novos botões */
+/* Mantido seu CSS original com as correções estruturais de alinhamento */
 .admin-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 .admin-container h2 {
     margin-bottom: 20px;
@@ -88,17 +96,19 @@
     border-collapse: collapse;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 .admin-table th,
 .admin-table td {
-    padding: 12px 15px;
+    padding: 14px 15px;
     text-align: left;
     border-bottom: 1px solid #efefef;
+    vertical-align: middle;
 }
 .admin-table th {
     background: #f8f9fa;
     font-weight: 600;
+    color: #495057;
 }
 .alert-success {
     background: #d4edda;
@@ -108,32 +118,47 @@
     margin-bottom: 20px;
 }
 .status {
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 20px;
     font-size: 12px;
-    font-weight: 500;
-}
-.status-aprovado { background: #d4edda; color: #155724; }
-.status-pendente { background: #fff3cd; color: #856404; }
-.status-bloqueado { background: #f8d7da; color: #721c24; }
-
-.actions form {
-    margin: 0 2px;
-}
-.actions button {
+    font-weight: 600;
     display: inline-block;
-    padding: 5px 10px;
+}
+/* Classes aceitando variações de gênero do banco de dados */
+.status-aprovado, .status-aprovada { background: #d4edda; color: #155724; }
+.status-pendente { background: #fff3cd; color: #856404; }
+.status-bloqueado, .status-bloqueada { background: #f8d7da; color: #721c24; }
+
+/* 🔥 CORREÇÃO VISUAL CRUCIAL PARA OS BOTÕES LADO A LADO */
+.actions-cell {
+    width: 280px; /* Garante espaço confortável na tabela */
+}
+.actions-wrapper {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+}
+.actions-wrapper form {
+    margin: 0;
+    display: inline-block;
+}
+.actions-wrapper button {
+    padding: 6px 12px;
     border: none;
     border-radius: 6px;
     font-size: 12px;
+    font-weight: bold;
     cursor: pointer;
-    transition: opacity 0.2s;
+    white-space: nowrap; /* Evita que o texto quebre dentro do botão */
+    transition: opacity 0.2s, transform 0.1s;
 }
-.actions button:hover {
-    opacity: 0.85;
+.actions-wrapper button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
 .btn-aprovar { background: #28a745; color: white; }
-.btn-bloquear { background: #ffc107; color: #333; }
+.btn-bloquear { background: #ffc107; color: #212529; }
 .btn-excluir { background: #dc3545; color: white; }
 </style>
 
