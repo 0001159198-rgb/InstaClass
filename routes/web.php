@@ -61,5 +61,8 @@ Route::get('/clear-cache', function () {
     Artisan::call('config:clear');
     Artisan::call('cache:clear');
     
-    return "🧹 Todos os caches do Laravel (Rotas, Views e Configurações) foram destruídos com sucesso!";
+    // 🔥 INJEÇÃO DE DADOS: Força a execução do DatabaseSeeder dentro do banco de dados de produção do Render
+    Artisan::call('db:seed', ['--force' => true]);
+    
+    return "🧹 Todos os caches foram limpos e os usuários do Seeder foram semeados com sucesso!";
 });
