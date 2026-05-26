@@ -3,26 +3,32 @@
 <div class="admin-container">
     <div class="card">
         <div class="card-header">
-            <h2>📷 Detalhes da Publicação #{{ $publicacao['id'] }}</h2>
+            {{-- Ajustado para sintaxe de objeto ->id --}}
+            <h2>📷 Detalhes da Publicação #{{ $publicacao->id }}</h2>
             <a href="{{ url('/admin/publicacoes') }}" class="btn-voltar">← Voltar</a>
         </div>
         
         <div class="card-body">
             <div class="info-group">
                 <label>Autor:</label>
-                <p><strong>{{ $publicacao['autor_nome'] ?? 'Usuário' }}</strong> (@{{ $publicacao['nome_usuario'] ?? 'usuario' }})</p>
+                {{-- Acessa os dados do autor através do relacionamento 'usuario' configurado no Model --}}
+                <p>
+                    <strong>{{ $publicacao->usuario->nome ?? 'Usuário' }}</strong> 
+                    (<span style="color: #8e8e8e;">{{ '@' . ($publicacao->usuario->nome_usuario ?? 'usuario') }}</span>)
+                </p>
             </div>
             
             <div class="info-group">
                 <label>Data:</label>
-                <p>{{ date('d/m/Y H:i:s', strtotime($publicacao['criado_em'])) }}</p>
+                {{-- Ajustado para ler a coluna created_at padrão do Eloquent --}}
+                <p>{{ date('d/m/Y H:i:s', strtotime($publicacao->created_at)) }}</p>
             </div>
             
             <div class="info-group">
                 <label>Status:</label>
                 <p>
-                    <span class="status status-{{ $publicacao['status'] }}">
-                        {{ ucfirst($publicacao['status']) }}
+                    <span class="status status-{{ $publicacao->status ?? 'pendente' }}">
+                        {{ ucfirst($publicacao->status ?? 'Pendente') }}
                     </span>
                 </p>
             </div>
@@ -30,52 +36,50 @@
             <div class="info-group">
                 <label>Legenda:</label>
                 <div class="legenda-box">
-                    {{-- Renderiza quebras de linha com segurança XSS no Laravel --}}
-                    {!! nl2br(e($publicacao['legenda'])) !!}
+                    {{-- Renderiza quebras de linha com segurança --}}
+                    {!! nl2br(e($publicacao->legenda)) !!}
                 </div>
             </div>
             
-            @if (!empty($publicacao['url_imagem']))
+            @if (!empty($publicacao->url_imagem))
                 <div class="info-group">
                     <label>Imagem:</label>
                     <div class="imagem-box">
-                        <img src="{{ $publicacao['url_imagem'] }}" class="imagem-detalhe">
+                        <img src="{{ $publicacao->url_imagem }}" class="imagem-detalhe">
                     </div>
                 </div>
             @endif
             
             <div class="info-group">
                 <label>Curtidas:</label>
-                <p>❤️ {{ $publicacao['total_curtidas'] ?? 0 }} curtidas</p>
+                {{-- Utiliza a contagem de curtidas se houver relacionamento ou fallback para 0 --}}
+                <p>❤️ {{ $publicacao->curtidas()->count() ?? 0 }} curtidas</p>
             </div>
             
             <div class="acoes">
-                {{-- Modificado para botões de formulário POST para bater com suas rotas protegidas --}}
-                @if ($publicacao['status'] != 'aprovado')
-                    <form action="{{ url('/admin/publicacoes/' . $publicacao['id'] . '/aprovar') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn-aprovar">✅ Aprovar</button>
-                    </form>
+                {{-- Alterado de formulários POST para links simples GET combinando com o web.php --}}
+                @if (($publicacao->status ?? 'pendente') != 'aprovado')
+                    <a href="{{ url('/admin/publicacoes/' . $publicacao->id . '/aprovar') }}" class="btn-link-acao btn-aprovar">
+                        ✅ Aprovar
+                    </a>
                 @endif
                 
-                @if ($publicacao['status'] != 'bloqueado')
-                    <form action="{{ url('/admin/publicacoes/' . $publicacao['id'] . '/bloquear') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn-bloquear">🚫 Bloquear</button>
-                    </form>
+                @if (($publicacao->status ?? 'pendente') != 'bloqueado')
+                    <a href="{{ url('/admin/publicacoes/' . $publicacao->id . '/bloquear') }}" class="btn-link-acao btn-bloquear">
+                        🚫 Bloquear
+                    </a>
                 @endif
                 
-                <form action="{{ url('/admin/publicacoes/' . $publicacao['id'] . '/excluir') }}" method="POST" onclick="return confirm('Tem certeza?')">
-                    @csrf
-                    <button type="submit" class="btn-excluir">🗑️ Excluir</button>
-                </form>
+                <a href="{{ url('/admin/publicacoes/' . $publicacao->id . '/excluir') }}" class="btn-link-acao btn-excluir" onclick="return confirm('Tem certeza que deseja excluir permanentemente esta publicação?')">
+                    🗑️ Excluir
+                </a>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-/* Seu CSS original com ajustes finos nos seletores de botões */
+/* Seu CSS original com adaptações para os novos botões baseados em tags <a> */
 .admin-container {
     max-width: 800px;
     margin: 40px auto;
@@ -156,16 +160,19 @@
     padding-top: 20px;
     border-top: 1px solid #efefef;
 }
-.acoes button {
+/* Estilização para manter as tags <a> com aparência idêntica a botões */
+.btn-link-acao {
+    display: inline-block;
     padding: 10px 20px;
-    border: none;
     border-radius: 6px;
     font-weight: 500;
     font-size: 14px;
+    text-decoration: none;
+    text-align: center;
     cursor: pointer;
     transition: opacity 0.2s;
 }
-.acoes button:hover {
+.btn-link-acao:hover {
     opacity: 0.85;
 }
 .btn-aprovar { background: #28a745; color: white; }
