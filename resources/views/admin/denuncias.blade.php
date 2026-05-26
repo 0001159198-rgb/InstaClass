@@ -57,7 +57,12 @@
                         <a href="{{ url('/admin/publicacoes/' . $d->publicacao_id) }}" class="btn-ver">👁️ Ver Post</a>
                         
                         @if (($d->status ?? 'pendente') == 'pendente')
-                            <a href="{{ url('/admin/denuncias/' . $d->id . '/analisar') }}" class="btn-analisar">✅ Analisar</a>
+                            {{-- ✅ CORREÇÃO: Redireciona para o perfil do dono do post e mudou o texto --}}
+                            @if(!empty($d->publicacao->usuario_id))
+                                <a href="{{ url('/perfil/' . $d->publicacao->usuario_id) }}" class="btn-analisar">🔍 Analisar perfil</a>
+                            @else
+                                <a href="{{ url('/admin/denuncias/' . $d->id . '/analisar') }}" class="btn-analisar">✅ Analisar</a>
+                            @endif
                         @endif
                     </td>
                 </tr>
