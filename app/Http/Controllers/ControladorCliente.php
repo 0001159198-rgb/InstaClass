@@ -303,6 +303,11 @@ class ControladorCliente extends Controller {
         $senha = $request->input('senha', '');
         $tipoSelecionado = $request->input('tipo', 'cliente');
 
+        // 🔥 BLOCK ADMINISTRADOR: Se selecionou administrador, barra imediatamente com erro customizado
+        if ($tipoSelecionado === 'admin' || $tipoSelecionado === 'administrador') {
+            return redirect()->to('/login?erro=custom&mensagem=' . urlencode('Acesso não autorizado'));
+        }
+
         if (empty($email) || empty($senha)) {
             return redirect()->to('/login?erro=1');
         }
@@ -310,10 +315,6 @@ class ControladorCliente extends Controller {
         $usuario = Usuario::buscarPorEmail($email);
 
         if ($usuario && password_verify($senha, $usuario->senha)) {
-
-            if ($tipoSelecionado == 'admin' && $usuario->tipo != 'admin') {
-                return redirect()->to('/login?erro=2&tipo=admin');
-            }
 
             auth()->loginUsingId($usuario->id);
 
