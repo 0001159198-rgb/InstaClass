@@ -47,8 +47,9 @@
                                 <a href="{{ url('/perfil/' . $pub->usuario_id) }}" style="color: #333; font-weight: bold; text-decoration: none; font-size: 14px;">
                                     {{ $pub->autor_nome ?? 'Usuário' }}
                                 </a>
+                                {{-- CORRIGIDO: Isolado o caractere @ para o Blade compilar a variável --}}
                                 <span style="color: #888; font-size: 11px;">
-                                    @{{ $pub->autor_username ?? 'usuario' }} • {{ date('d/m/Y H:i', strtotime($pub->created_at ?? 'now')) }}
+                                    <span>@</span>{{ $pub->autor_username ?? 'usuario' }} • {{ date('d/m/Y H:i', strtotime($pub->created_at ?? 'now')) }}
                                 </span>
                             </div>
                         </div>
@@ -82,6 +83,7 @@
                             </span>
                         </div>
 
+                        {{-- CORRIGIDO: Removido o arroba daqui para renderizar o username dinamicamente --}}
                         <p style="margin: 0; font-size: 14px; color: #222; line-height: 1.5;">
                             <strong>{{ $pub->autor_username ?? 'usuario' }}</strong> {!! nl2br(e($pub->legenda ?? '')) !!}
                         </p>
@@ -110,7 +112,7 @@
             {{-- Campo Seleção de Motivo --}}
             <label style="display: block; font-weight: bold; font-size: 13px; color: #444; margin-bottom: 8px;">Motivo da Denúncia:</label>
             <select name="motivo" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px; background: #fafafa; cursor: pointer;">
-                <option value="Conteúdo impróprio">領 Conteúdo impróprio / Nudez / Pornografia</option>
+                <option value="Conteúdo impróprio">🔞 Conteúdo impróprio / Nudez / Pornografia</option>
                 <option value="Discurso de ódio">🤬 Discurso de ódio, Intolerância ou Bullying</option>
                 <option value="Spam ou Fraude">🛡️ Spam, Links maliciosos ou Golpe</option>
                 <option value="Violência ou Ameaças">⚠️ Violência explícita ou Ameaças</option>
