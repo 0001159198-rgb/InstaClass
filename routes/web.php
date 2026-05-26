@@ -43,10 +43,13 @@ Route::prefix('admin')->group(function () {
     Route::get('/publicacoes', [ControladorAdmin::class, 'listarPublicacoes']);
     Route::get('/publicacoes/{id}', [ControladorAdmin::class, 'verPublicacao'])->where('id', '[0-9]+');
     
-    // 🔥 CORREÇÃO: Alterado de POST para GET para os botões/links do painel funcionarem sem erro 405
+    // Links do painel administrativo via GET para evitar erro 405
     Route::get('/publicacoes/{id}/aprovar', [ControladorAdmin::class, 'aprovarPublicacao'])->where('id', '[0-9]+');
     Route::get('/publicacoes/{id}/bloquear', [ControladorAdmin::class, 'bloquearPublicacao'])->where('id', '[0-9]+');
     Route::get('/publicacoes/{id}/excluir', [ControladorAdmin::class, 'excluirPublicacao'])->where('id', '[0-9]+');
+
+    // ✅ ROTA ADICIONADA: Processa a análise de uma denúncia específica
+    Route::get('/denuncias/{id}/analisar', [ControladorAdmin::class, 'analisarDenuncia'])->where('id', '[0-9]+');
 });
 
 
