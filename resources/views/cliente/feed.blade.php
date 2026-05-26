@@ -1,356 +1,124 @@
 @include('layouts.header')
 
-<meta name="csrf-token" content="{{ csrf_token() }}">
-
-@if (session('mensagem'))
-    <div class="mensagem-flash">
-        {{ session('mensagem') }}
+<div class="container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    
+    {{-- Botão para Criar Nova Publicação --}}
+    <div style="margin-bottom: 25px; text-align: right;">
+        <a href="{{ url('/publicacoes/criar') }}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            ➕ Nova Publicação
+        </a>
     </div>
-@endif
 
-@if (session('erro'))
-    <div class="erro-flash">
-        {{ session('erro') }}
-    </div>
-@endif
-
-<div id="modalDenuncia" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>🚨 Denunciar Publicação</h3>
-            <span class="close-modal">&times;</span>
+    {{-- Sistema de Alertas (Mensagens de Sucesso ou Erro) --}}
+    @if(session('mensagem'))
+        <div style="background: #d4edda; color: #155724; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
+            {{ session('mensagem') }}
         </div>
-        <form id="formDenuncia" method="POST">
-            @csrf 
-            <input type="hidden" name="publicacao_id" id="publicacao_id">
-            <p>Selecione o motivo da denúncia:</p>
-            <div class="motivo-option" data-motivo="Conteúdo impróprio">📝 Conteúdo impróprio</div>
-            <div class="motivo-option" data-motivo="Discurso de ódio">😡 Discurso de ódio</div>
-            <div class="motivo-option" data-motivo="Spam ou enganoso">📢 Spam ou enganoso</div>
-            <div class="motivo-option" data-motivo="Violência ou conteúdo perigoso">⚠️ Violência ou conteúdo perigoso</div>
-            <div class="motivo-option" data-motivo="Assédio ou bullying">💔 Assédio ou bullying</div>
-            <div class="motivo-option" data-motivo="Conteúdo sexual">🔞 Conteúdo sexual</div>
-            <div class="motivo-option" data-motivo="Outro">📌 Outro (especifique)</div>
-            <input type="text" id="motivo_outro" class="motivo-outro" placeholder="Digite o motivo da denúncia...">
-            <input type="hidden" name="motivo" id="motivo_selecionado">
-            <input type="hidden" name="gravidade" value="media">
-            <button type="submit" class="btn-enviar">Enviar Denúncia</button>
-        </form>
-    </div>
-</div>
+    @endif
 
-<div class="app-shell">
-    <main class="main-content">
-        <div class="feed-container">
-            <header class="topbar-feed">
-                <h2>🏠 Feed</h2>
-            </header>
-            <section class="feed">
-                @if (empty($publicacoes) || count($publicacoes) === 0)
-                    <div class="empty-state">
-                        <p>📭 Nenhuma publicação encontrada.</p>
-                        <a href="{{ url('/publicacoes/criar') }}" class="btn-criar">➕ Criar primeira publicação</a>
-                    </div>
-                @else
-                    @foreach ($publicacoes as $pub)
-                        @php 
-                            $pub = (array) $pub; 
-                        @endphp
-                        <div class="post">
-                            <div class="post-header">
-                                <div class="post-avatar">
-                                    {{ strtoupper(substr($pub['autor_nome'] ?? 'U', 0, 1)) }}
-                                </div>
-                                <div class="post-info">
-                                    <a href="{{ url('/perfil/' . $pub['usuario_id']) }}" class="post-nome">
-                                        {{ $pub['autor_nome'] ?? 'Usuário' }}
-                                    </a>
-                                    <div class="post-data">
-                                        {{ date('d/m/Y \à\s H:i', strtotime($pub['criado_em'] ?? 'now')) }}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <p class="post-legenda">{!! nl2br(e($pub['legenda'])) !!}</p>
-                            
-                            @if (!empty($pub['url_imagem']))
-                                <img src="{{ $pub['url_imagem'] }}" class="post-imagem" onerror="this.src='{{ asset('assets/img/default.jpg') }}'">
-                            @endif
-                            
-                            <div class="post-acoes">
-                                <a href="{{ url('/publicacoes/' . $pub['id'] . '/curtir') }}" class="btn-curtir">
-                                    ❤️ Curtir (<span>{{ $pub['total_curtidas'] ?? 0 }}</span>)
+    @if(session('erro'))
+        <div style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
+            {{ session('erro') }}
+        </div>
+    @endif
+
+    {{-- Renderização da Listagem do Feed --}}
+    @if (!isset($publicacoes) || count($publicacoes) === 0)
+        <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <span style="font-size: 48px; display: block; margin-bottom: 10px;">📭</span>
+            <p style="margin: 0; color: #666; font-size: 16px;">Nenhuma publicação encontrada no feed.</p>
+        </div>
+    @else
+        <div class="feed-lista" style="display: flex; flex-direction: column; gap: 30px;">
+            @foreach ($publicacoes as $pub)
+                @php 
+                    // Força a conversão para array para evitar erros de leitura de chaves no PostgreSQL/Eloquent
+                    $pubArray = (array) $pub;
+                    
+                    // Identifica o ID do usuário através de múltiplos fallbacks para matar o Erro 500
+                    $linkId = $pubArray['usuario_id'] ?? $pubArray['id_usuario'] ?? $pubArray['user_id'] ?? null;
+                    
+                    // Validação do link da imagem
+                    $imagem = (!empty($pubArray['url_imagem']) && $pubArray['url_imagem'] !== 'null' && $pubArray['url_imagem'] !== 'undefined') 
+                        ? $pubArray['url_imagem'] 
+                        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
+                @endphp
+
+                <div class="card-post" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid #eef0f2;">
+                    
+                    {{-- Cabeçalho do Post (Avatar e Nome do Autor) --}}
+                    <div class="post-header" style="display: flex; align-items: center; gap: 12px; padding: 15px;">
+                        <div class="post-avatar" style="width: 42px; height: 42px; background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: white; font-weight: bold; flex-shrink: 0;">
+                            {{ strtoupper(substr($pubArray['autor_nome'] ?? $pubArray['nome'] ?? 'U', 0, 1)) }}
+                        </div>
+                        <div class="post-info" style="display: flex; flex-direction: column;">
+                            @if($linkId)
+                                <a href="{{ url('/perfil/' . $linkId) }}" class="post-nome" style="color: #333; font-weight: bold; text-decoration: none; font-size: 15px;">
+                                    {{ $pubArray['autor_nome'] ?? $pubArray['nome'] ?? 'Usuário' }}
                                 </a>
-                                <button type="button" class="btn-denunciar" onclick="abrirModal({{ $pub['id'] }})">
-                                    🚨 Denunciar
-                                </button>
+                            @else
+                                <span class="post-nome" style="color: #333; font-weight: bold; font-size: 15px;">
+                                    {{ $pubArray['autor_nome'] ?? $pubArray['nome'] ?? 'Usuário' }}
+                                </span>
+                            @endif
+                            <div class="post-data" style="color: #888; font-size: 12px; margin-top: 2px;">
+                                {{ date('d/m/Y \à\s H:i', strtotime($pubArray['criado_em'] ?? $pubArray['created_at'] ?? 'now')) }}
                             </div>
                         </div>
-                    @endforeach
-                @endif
-            </section>
+                    </div>
+                    
+                    {{-- Imagem da Publicação --}}
+                    <img src="{{ $imagem }}" 
+                         alt="Imagem do post" 
+                         style="width: 100%; max-height: 450px; object-fit: cover; display: block;"
+                         onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';">
+                    
+                    {{-- Corpo da Publicação (Legenda e Ações) --}}
+                    <div class="card-body" style="padding: 15px;">
+                        
+                        {{-- Legenda com suporte a quebras de linha limpas --}}
+                        <p class="post-legenda" style="margin: 0 0 15px 0; font-size: 15px; color: #222; line-height: 1.5; word-wrap: break-word;">
+                            {!! nl2br(e($pubArray['legenda'] ?? '')) !!}
+                        </p>
+                        
+                        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 12px;">
+
+                        {{-- Barra de Interação (Curtidas e Denúncias) --}}
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            
+                            {{-- Seção de Curtidas --}}
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                @if (isset($pubArray['ja_curtiu']) && $pubArray['ja_curtiu'])
+                                    <a href="{{ url('/publicacoes/' . ($pubArray['id'] ?? 0) . '/descurtir') }}" style="text-decoration: none; color: #e74c3c; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+                                        ❤️ Descurtir
+                                    </a>
+                                @else
+                                    <a href="{{ url('/publicacoes/' . ($pubArray['id'] ?? 0) . '/curtir') }}" style="text-decoration: none; color: #666; font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+                                        🤍 Curtir
+                                    </a>
+                                @endif
+                                
+                                <span style="color: #666; font-size: 13px; font-weight: 500;">
+                                    {{ $pubArray['total_curtidas'] ?? 0 }} curtidas
+                                </span>
+                            </div>
+
+                            {{-- Botão de Denúncia --}}
+                            <form action="{{ url('/publicacoes/' . ($pubArray['id'] ?? 0) . '/denunciar') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Deseja realmente denunciar esta publicação por conteúdo inadequado?');">
+                                @csrf
+                                <button type="submit" style="background: none; border: none; color: #95a5a6; font-size: 13px; cursor: pointer; font-weight: 500; padding: 0;">
+                                    ⚠️ Denunciar
+                                </button>
+                            </form>
+
+                        </div>
+
+                    </div>
+                </div>
+            @endforeach
         </div>
-    </main>
+    @endif
+
 </div>
-
-<style>
-/* Fundo preto semitransparente cobrindo toda a tela */
-.modal {
-    display: none; 
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-}
-
-/* Caixa centralizada do modal */
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 20px;
-    border-radius: 14px;
-    width: 90%;
-    max-width: 450px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    animation: abrirModalAnimacao 0.3s ease-out;
-}
-
-@keyframes abrirModalAnimacao {
-    from { transform: translateY(-30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #efefef;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-size: 18px;
-    color: #262626;
-}
-
-.close-modal {
-    font-size: 28px;
-    font-weight: bold;
-    color: #8e8e8e;
-    cursor: pointer;
-}
-
-.close-modal:hover {
-    color: #262626;
-}
-
-/* Opções de clique do motivo */
-.motivo-option {
-    padding: 10px 12px;
-    border: 1px solid #dbdbdb;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
-}
-
-.motivo-option:hover {
-    background-color: #fafafa;
-    border-color: #b2b2b2;
-}
-
-.motivo-option.selected {
-    background-color: #e8f5fe;
-    border-color: #3897f0;
-    color: #004c8c;
-    font-weight: 600;
-}
-
-/* Input extra para a opção 'Outro' */
-.motivo-outro {
-    display: none;
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #dbdbdb;
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-.motivo-outro.show {
-    display: block;
-}
-
-.btn-enviar {
-    width: 100%;
-    padding: 12px;
-    background-color: #ed4956;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-}
-
-.btn-enviar:hover {
-    background-color: #c92f3c;
-}
-
-/* Estilos básicos de mensagens flash */
-.mensagem-flash, .erro-flash {
-    padding: 12px;
-    margin: 10px auto;
-    max-width: 600px;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: 500;
-    transition: opacity 0.5s ease;
-}
-.mensagem-flash { background-color: #e8f5e9; color: #2e7d32; }
-.erro-flash { background-color: #ffebee; color: #c62828; }
-</style>
-
-<script>
-// ================== MODAL DE DENÚNCIA ==================
-var modal = document.getElementById('modalDenuncia');
-var publicacaoId = null;
-
-function abrirModal(id) {
-    publicacaoId = id;
-    document.getElementById('publicacao_id').value = id;
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-    
-    // Resetar seleção
-    document.querySelectorAll('.motivo-option').forEach(opt => {
-        opt.classList.remove('selected');
-    });
-    document.getElementById('motivo_outro').classList.remove('show');
-    document.getElementById('motivo_outro').value = '';
-    document.getElementById('motivo_selecionado').value = '';
-}
-
-function fecharModal() {
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-}
-
-// Fechar modal ao clicar no X ou fora
-document.querySelector('.close-modal')?.addEventListener('click', fecharModal);
-window.addEventListener('click', function(e) {
-    if (e.target == modal) fecharModal();
-});
-
-// Selecionar motivo
-document.querySelectorAll('.motivo-option').forEach(option => {
-    option.addEventListener('click', function() {
-        document.querySelectorAll('.motivo-option').forEach(opt => {
-            opt.classList.remove('selected');
-        });
-        this.classList.add('selected');
-        
-        var motivo = this.getAttribute('data-motivo');
-        document.getElementById('motivo_selecionado').value = motivo;
-        
-        if (motivo === 'Outro') {
-            document.getElementById('motivo_outro').classList.add('show');
-        } else {
-            document.getElementById('motivo_outro').classList.remove('show');
-        }
-    });
-});
-
-// Enviar denúncia
-document.getElementById('formDenuncia').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    var motivo = document.getElementById('motivo_selecionado').value;
-    var motivoOutro = document.getElementById('motivo_outro').value;
-    
-    if (!motivo) {
-        alert('⚠️ Por favor, selecione um motivo para a denúncia.');
-        return;
-    }
-    
-    if (motivo === 'Outro' && motivoOutro.trim() === '') {
-        alert('⚠️ Por favor, digite o motivo da denúncia.');
-        return;
-    }
-    
-    if (motivo === 'Outro') {
-        motivo = motivoOutro;
-    }
-    
-    var form = document.createElement('form');
-    form.method = 'POST';
-    form.action = "{{ url('/publicacoes') }}/" + publicacaoId + "/denunciar";
-    
-    var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    var inputToken = document.createElement('input');
-    inputToken.type = 'hidden';
-    inputToken.name = '_token';
-    inputToken.value = token;
-    
-    var inputMotivo = document.createElement('input');
-    inputMotivo.type = 'hidden';
-    inputMotivo.name = 'motivo';
-    inputMotivo.value = motivo;
-    
-    var inputGravidade = document.createElement('input');
-    inputGravidade.type = 'hidden';
-    inputGravidade.name = 'gravidade';
-    inputGravidade.value = 'media';
-    
-    form.appendChild(inputToken);
-    form.appendChild(inputMotivo);
-    form.appendChild(inputGravidade);
-    document.body.appendChild(form);
-    
-    form.submit();
-});
-
-// ================== CURTIR - ASSÍNCRONO COM TOKEN DE PROTEÇÃO ==================
-document.querySelectorAll('.btn-curtir').forEach(link => {
-    link.addEventListener('click', async function(e) {
-        e.preventDefault();
-        const url = this.href;
-        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': token,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            if (response.ok) {
-                window.location.reload();
-            } else {
-                console.error('Erro na resposta:', response.status);
-            }
-        } catch (error) {
-            console.error('Erro ao curtir:', error);
-        }
-    });
-});
-
-// ================== FECHAR MENSAGENS FLASH ==================
-setTimeout(function() {
-    var mensagens = document.querySelectorAll('.mensagem-flash, .erro-flash');
-    mensagens.forEach(function(msg) {
-        msg.style.opacity = '0';
-        setTimeout(function() { if(msg) msg.remove(); }, 500);
-    });
-}, 5000);
-</script>
 
 @include('layouts.footer')
