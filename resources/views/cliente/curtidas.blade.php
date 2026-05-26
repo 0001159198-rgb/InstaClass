@@ -42,8 +42,9 @@
                             <a href="{{ url('/perfil/' . $autorId) }}" style="color: #333; font-weight: bold; text-decoration: none; font-size: 14px;">
                                 {{ $pub->autor_nome ?? 'Usuário' }}
                             </a>
+                            {{-- 🔥 CORREÇÃO: Isolado o caractere @ dentro de tags <span> para o Blade ler a variável --}}
                             <span style="color: #888; font-size: 11px;">
-                                @{{ $pub->autor_username ?? 'usuario' }} • {{ date('d/m/Y', strtotime($pub->created_at ?? 'now')) }}
+                                <span>@</span>{{ $pub->autor_username ?? $pub->nome_usuario ?? 'usuario' }} • {{ date('d/m/Y', strtotime($pub->created_at ?? 'now')) }}
                             </span>
                         </div>
                     </div>
@@ -55,8 +56,9 @@
                     
                     {{-- Corpo e Legenda --}}
                     <div class="card-body" style="padding: 15px;">
+                        {{-- 🔥 CORREÇÃO: Removido o arroba solto daqui também para processar o nome correto --}}
                         <p style="margin: 0 0 15px 0; font-size: 14px; color: #222; line-height: 1.5;">
-                            <strong>{{ $pub->autor_username ?? 'usuario' }}</strong> {!! nl2br(e($pub->legenda ?? '')) !!}
+                            <strong>{{ $pub->autor_username ?? $pub->nome_usuario ?? 'usuario' }}</strong> {!! nl2br(e($pub->legenda ?? '')) !!}
                         </p>
                         
                         <hr style="border: 0; border-top: 1px solid #f1f2f4; margin-bottom: 12px;">
@@ -82,3 +84,4 @@
 </div>
 
 @include('layouts.footer')
+                                
