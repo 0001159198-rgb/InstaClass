@@ -35,8 +35,8 @@ class ControladorAdmin extends Controller {
         $totalPublicacoes = Publicacao::count();
         $totalDenuncias = Denuncia::count();
         
-        // Aceita tanto 'pendente' quanto variações de caixa
-        $totalPendentes = Publicacao::whereIn('status', ['pendente', 'PENDENTE'])->count();
+        // 🔥 PADRONIZAÇÃO: Aceita variações masculinas e femininas de pendentes para segurança
+        $totalPendentes = Publicacao::whereIn('status', ['pendente', 'PENDENTE', 'pendente', 'PENDENTE'])->count();
         
         // Buscar denúncias recentes com segurança
         try {
@@ -133,8 +133,8 @@ class ControladorAdmin extends Controller {
         }
         
         try {
-            // Mantém compatibilidade com o status feminino buscado pelo feed ('aprovada')
-            DB::table('publicacoes')->where('id', $id)->update(['status' => 'aprovada']);
+            // 🔥 CORREÇÃO: Alterado de 'aprovada' para 'aprovado' para casar perfeitamente com o BuscarController e o Feed
+            DB::table('publicacoes')->where('id', $id)->update(['status' => 'aprovado']);
             return redirect()->to('/admin/publicacoes')->with('mensagem', "✅ Publicação #$id aprovada com sucesso e liberada para o Feed!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao aprovar publicação: ' . $e->getMessage());
@@ -164,8 +164,8 @@ class ControladorAdmin extends Controller {
         }
         
         try {
-            // 🔥 CORREÇÃO: Atualizado para 'bloqueada' (feminino) mantendo a padronização das strings
-            DB::table('publicacoes')->where('id', $id)->update(['status' => 'bloqueada']);
+            // 🔥 CORREÇÃO: Alterado de 'bloqueada' para 'bloqueado' para manter o padrão correto no banco
+            DB::table('publicacoes')->where('id', $id)->update(['status' => 'bloqueado']);
             return redirect()->to('/admin/publicacoes')->with('mensagem', "🚫 Publicação #$id bloqueada com sucesso!");
         } catch (\Exception $e) {
             return redirect()->to('/admin/publicacoes')->with('erro', 'Erro ao bloquear publicação: ' . $e->getMessage());
