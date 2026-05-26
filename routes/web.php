@@ -17,18 +17,21 @@ Route::get('/', [ControladorCliente::class, 'welcome']);
 Route::get('/feed', [ControladorCliente::class, 'inicio']);
 Route::get('/buscar', [ControladorCliente::class, 'buscarPublicacoes']);
 
-// 🚨 CORREÇÃO: Rota de Perfil que estava faltando (Aceita /perfil ou /perfil/9)
+// CORREÇÃO: Rota de Perfil flexível (Aceita /perfil ou /perfil/9) protegendo contra 404 automáticos
 Route::get('/perfil/{id?}', [ControladorCliente::class, 'listarPublicacoesUsuario'])->where('id', '[0-9]+');
 
-// 🚨 CORREÇÃO: Rotas de criação de posts que estavam faltando para a conta normal funcionar
+// CORREÇÃO: Rotas para criação de publicações com mapeamento isolado para não quebrar o CSS
 Route::get('/publicacoes/criar', [ControladorCliente::class, 'criarPublicacao']);
 Route::post('/publicacoes/salvar', [ControladorCliente::class, 'salvarPublicacao']);
 
-// 🚨 CORREÇÃO: Rotas de Curtidas e Denúncias essenciais para as interações
+// CORREÇÃO: Rotas de interações (Curtidas e Denúncias)
 Route::get('/publicacoes/{id}/curtir', [ControladorCliente::class, 'curtirPublicacao']);
 Route::get('/publicacoes/{id}/descurtir', [ControladorCliente::class, 'descurtirPublicacao']);
-Route::get('/minhas-curtidas', [ControladorCliente::class, 'minhasCurtidas']);
 Route::post('/publicacoes/{id}/denunciar', [ControladorCliente::class, 'denunciarPublicacao']);
+
+// CORREÇÃO: Rota de listagem das curtidas do utilizador logado com redirecionamento amigável
+Route::get('/minhas-curtidas', [ControladorCliente::class, 'minhasCurtidas']);
+Route::redirect('/curtidas', '/minhas-curtidas');
 
 
 // ================== ÁREA ADMINISTRATIVA ==================
@@ -55,7 +58,7 @@ Route::get('/rodar-seed-temporario', function() {
     try {
         $seeder = new \Database\Seeders\DatabaseSeeder();
         $seeder->run();
-        return "⚡ Seed executado com sucesso!<br><br>🏁 Processo finalizado.";
+        return "⚡ Seed executado com sucesso e novas contas de exemplo criadas!<br><br>🏁 Processo finalizado.";
     } catch (\Exception $e) {
         return "❌ Erro ao rodar Seed: " . $e->getMessage();
     }
