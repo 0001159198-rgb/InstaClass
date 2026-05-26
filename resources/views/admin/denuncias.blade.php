@@ -30,35 +30,34 @@
             </thead>
             <tbody>
                 @foreach ($denuncias as $d)
-                @php 
-                    // Garante que o item seja tratado como array com segurança
-                    $dArray = (array) $d; 
-                @endphp
                 <tr>
-                    <td>#{{ $dArray['id'] }}</td>
+                    <td>#{{ $d->id }}</td>
                     <td style="max-width: 200px;">
-                        {{ Str::limit($dArray['publicacao_legenda'] ?? '', 50, '...') }}
+                        {{-- Puxa a legenda pelo relacionamento com segurança --}}
+                        {{ Str::limit($d->publicacao->legenda ?? 'Publicação sem legenda', 50, '...') }}
                     </td>
                     <td>
-                        <strong>{{ $dArray['usuario_nome'] ?? 'Usuário' }}</strong>
+                        {{-- Puxa o nome do usuário associado à denúncia --}}
+                        <strong>{{ $d->usuario->nome ?? 'Usuário Desconhecido' }}</strong>
                     </td>
-                    <td>{{ $dArray['motivo'] }}</td>
+                    <td>{{ $d->motivo }}</td>
                     <td>
-                        <span class="gravidade gravidade-{{ $dArray['gravidade'] }}">
-                            {{ ucfirst($dArray['gravidade']) }}
+                        <span class="gravidade gravidade-{{ $d->gravidade ?? 'baixa' }}">
+                            {{ ucfirst($d->gravidade ?? 'Pendente') }}
                         </span>
                     </td>
                     <td>
-                        <span class="status status-{{ $dArray['status'] }}">
-                            {{ ucfirst($dArray['status']) }}
+                        <span class="status status-{{ $d->status ?? 'pendente' }}">
+                            {{ ucfirst($d->status ?? 'Pendente') }}
                         </span>
                     </td>
-                    <td>{{ date('d/m/Y H:i', strtotime($dArray['criado_em'])) }}</td>
+                    {{-- Tratamento seguro da data criada_em (created_at no Eloquent) --}}
+                    <td>{{ date('d/m/Y H:i', strtotime($d->created_at)) }}</td>
                     <td class="actions">
-                        <a href="{{ url('/admin/publicacoes/' . $dArray['publicacao_id']) }}" class="btn-ver">👁️ Ver Post</a>
+                        <a href="{{ url('/admin/publicacoes/' . $d->publicacao_id) }}" class="btn-ver">👁️ Ver Post</a>
                         
-                        @if ($dArray['status'] == 'pendente')
-                            <a href="{{ url('/admin/denuncias/' . $dArray['id'] . '/analisar') }}" class="btn-analisar">✅ Analisar</a>
+                        @if (($d->status ?? 'pendente') == 'pendente')
+                            <a href="{{ url('/admin/denuncias/' . $d->id . '/analisar') }}" class="btn-analisar">✅ Analisar</a>
                         @endif
                     </td>
                 </tr>
@@ -69,7 +68,7 @@
 </div>
 
 <style>
-/* Mantido seu CSS original perfeitamente intacto */
+/* Seu CSS original foi mantido 100% intacto sem alterações */
 .admin-container {
     max-width: 1200px;
     margin: 0 auto;
