@@ -31,21 +31,16 @@
                 @php 
                     $pubArray = (array) $pub;
                     $urlBanco = trim($pubArray['url_imagem'] ?? '');
-                    $idPost = $pubArray['id'] ?? 0;
+                    $usernameAutor = $pubArray['autor_username'] ?? 'usuario';
 
-                    // Criamos SVGs dinâmicos embutidos em Base64 para garantir que NUNCA dê 404 ou erro de SSL
-                    $svgPlaceholder1 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'><rect width='100%' height='100%' fill='%23667eea'/><text x='50%' y='50%' font-family='sans-serif' font-size='24' fill='white' font-weight='bold' text-anchor='middle'>InstaClass • Espaço de Estudos</text></svg>";
-                    $svgPlaceholder2 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'><rect width='100%' height='100%' fill='%23764ba2'/><text x='50%' y='50%' font-family='sans-serif' font-size='24' fill='white' font-weight='bold' text-anchor='middle'>Foco nos Códigos! 💻</text></svg>";
+                    // SVG de fallback gerado via código (Base64) caso o link do usuário seja vazio ou quebre
+                    $svgFallback = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'><rect width='100%' height='100%' fill='%23764ba2'/><text x='50%' y='50%' font-family='sans-serif' font-size='22' fill='white' font-weight='bold' text-anchor='middle'>Publicação de @".$usernameAutor."</text></svg>";
 
-                    // Validação robusta para intercetar campos vazios ou domínios bloqueados na rede
-                    if (empty($urlBanco) || $urlBanco === 'null' || str_contains($urlBanco, 'unsplash.com') || str_contains($urlBanco, 'picsum.photos')) {
-                        if ($idPost % 2 == 0) {
-                            $imagem = $svgPlaceholder1;
-                        } else {
-                            $imagem = $svgPlaceholder2;
-                        }
+                    // Se estiver estritamente vazio no banco, já define o fallback visual estável
+                    if (empty($urlBanco) || $urlBanco === 'null') {
+                        $imagemExibir = $svgFallback;
                     } else {
-                        $imagem = $urlBanco;
+                        $imagemExibir = $urlBanco;
                     }
                 @endphp
 
@@ -62,7 +57,7 @@
                                     {{ $pubArray['autor_nome'] ?? 'Usuário' }}
                                 </a>
                                 <span style="color: #888; font-size: 11px;">
-                                    <span>@</span>{{ $pubArray['autor_username'] ?? 'usuario' }} • {{ date('d/m/Y H:i', strtotime($pubArray['created_at'] ?? $pubArray['criado_em'] ?? 'now')) }}
+                                    <span>@</span>{{ $usernameAutor }} • {{ date('d/m/Y H:i', strtotime($pubArray['created_at'] ?? $pubArray['criado_em'] ?? 'now')) }}
                                 </span>
                             </div>
                         </div>
@@ -75,10 +70,10 @@
                     
                     {{-- Mídia do Post --}}
                     <div style="background: #fcfcfc; width: 100%; text-align: center; min-height: 250px; display: flex; align-items: center; justify-content: center;">
-                        {{-- O onerror agora aponta para um fallback em string SVG inline seguro --}}
-                        <img src="{!! $imagem !!}" 
+                        {{-- Tenta carregar a imagem do usuário ($imagemExibir). Se o link quebrar na rede (onerror), troca pelo SVG local --}}
+                        <img src="{!! $imagemExibir !!}" 
                              style="width: 100%; max-height: 500px; object-fit: cover; display: block; margin: 0 auto;"
-                             onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'600\' height=\'400\'><rect width=\'100%\' height=\'100%\' fill=\'%23667eea\'/><text x=\'50%\' y=\'50%\' fill=\'white\' text-anchor=\'middle\' font-weight=\'bold\'>InstaClass</text></svg>';">
+                             onerror="this.onerror=null; this.src='{!! $svgFallback !!}';">
                     </div>
                     
                     {{-- Ações e Legenda --}}
@@ -99,7 +94,7 @@
                         </div>
 
                         <p style="margin: 0; font-size: 14px; color: #222; line-height: 1.5;">
-                            <strong>{{ $pubArray['autor_username'] ?? 'usuario' }}</strong> {!! nl2br(e($pubArray['legenda'] ?? '')) !!}
+                            <strong>{{ $usernameAutor }}</strong> {!! nl2br(e($pubArray['legenda'] ?? '')) !!}
                         </p>
                     </div>
 
@@ -110,9 +105,7 @@
 
 </div>
 
-{{-- ========================================================= --}}
-{{-- 📦 ESTRUTURA DO MODAL FLUTUANTE DE DENÚNCIA               --}}
-{{-- ========================================================= --}}
+{{-- Modal de Denúncia --}}
 <div id="modalDenuncia" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
     <div style="background: white; padding: 25px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; font-family: sans-serif;">
         
