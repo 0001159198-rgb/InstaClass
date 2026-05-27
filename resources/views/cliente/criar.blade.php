@@ -15,7 +15,8 @@
             </div>
         @endif
 
-        <form action="{{ url('/publicacoes/salvar') }}" method="POST">
+        {{-- Adicionado o ID "formPublicar" para interceptar o envio com JavaScript --}}
+        <form id="formPublicar" action="{{ url('/publicacoes/salvar') }}" method="POST">
             @csrf
 
             {{-- Campo da Legenda --}}
@@ -33,7 +34,7 @@
                     🖼️ URL da Imagem (opcional)
                 </label>
                 <input type="url" id="url_imagem" name="url_imagem" placeholder="https://exemplo.com/sua-imagem.jpg" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; box-sizing: border-box;">
-                <small style="color: #888; display: block; margin-top: 4px;">Cole o link de uma imagem válida da internet</small>
+                <small style="color: #888; display: block; margin-top: 4px;">Se deixar em branco, geraremos uma imagem linda para você!</small>
             </div>
 
             {{-- Botão de Enviar --}}
@@ -51,5 +52,18 @@
 
     </div>
 </div>
+
+{{-- Script para injetar imagem automática caso o campo fique em branco --}}
+<script>
+document.getElementById('formPublicar').addEventListener('submit', function(e) {
+    const inputImagem = document.getElementById('url_imagem');
+    
+    // Se o usuário não preencher a URL da imagem, injetamos uma do Picsum dinamicamente
+    if (!inputImagem.value.trim()) {
+        const idAleatorio = Math.floor(Math.random() * 1000);
+        inputImagem.value = 'https://picsum.photos/600/500?random=' + idAleatorio;
+    }
+});
+</script>
 
 @include('layouts.footer')
