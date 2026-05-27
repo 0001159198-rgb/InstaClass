@@ -17,7 +17,6 @@
         
         <h2 style="margin: 0; color: #333; font-size: 22px;">{{ $usuario->nome ?? 'Usuário' }}</h2>
         
-        {{-- 🔥 CORREÇÃO INTEGRAL DA TAG QUEBRADA AQUI --}}
         <p style="margin: 5px 0 15px 0; color: #888; font-size: 14px;">
             <span>@</span>{{ $usuario->nome_usuario ?? 'usuario' }}
         </p>
@@ -44,10 +43,18 @@
         <div class="feed-lista" style="display: flex; flex-direction: column; gap: 25px;">
             @foreach ($publicacoes as $pub)
                 @php 
-                    // Fallback se a imagem falhar ou vier nula
-                    $imagem = (!empty($pub->url_imagem) && $pub->url_imagem !== 'null') 
-                        ? $pub->url_imagem 
-                        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
+                    $urlBanco = trim($pub->url_imagem ?? '');
+                    $usernameAutor = $usuario->nome_usuario ?? 'usuario';
+
+                    // Gerando um bloco SVG seguro e leve caso a imagem fornecida quebre ou não exista
+                    $svgFallback = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'><rect width='100%' height='100%' fill='%23764ba2'/><text x='50%' y='50%' font-family='sans-serif' font-size='22' fill='white' font-weight='bold' text-anchor='middle'>Publicação de @".$usernameAutor."</text></svg>";
+                    
+                    // Prioriza 100% o que veio do banco, interceptando apenas nulos ou links sabidamente bloqueados
+                    if (empty($urlBanco) || $urlBanco === 'null' || str_contains($urlBanco, 'unsplash.com') || str_contains($urlBanco, 'picsum.photos')) {
+                        $imagemExibir = $svgFallback;
+                    } else {
+                        $imagemExibir = $urlBanco;
+                    }
                     
                     // Define a cor da etiqueta de status
                     $statusCor = ($pub->status ?? 'pendente') === 'aprovada' ? '#2ecc71' : '#f39c12';
@@ -56,15 +63,18 @@
                 <div class="card-post" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #eef0f2;">
                     
                     {{-- Imagem do Post --}}
-                    <div style="background: #fdfdfd; width: 100%; text-align: center;">
-                        <img src="{{ $imagem }}" style="width: 100%; max-height: 450px; object-fit: cover; display: block; margin: 0 auto;">
+                    <div style="background: #fdfdfd; width: 100%; text-align: center; min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                        {{-- Exibe a foto do usuário e, caso ela falhe em tempo de execução, aciona o onError com o SVG --}}
+                        <img src="{!! $imagemExibir !!}" 
+                             style="width: 100%; max-height: 450px; object-fit: cover; display: block; margin: 0 auto;"
+                             onerror="this.onerror=null; this.src='{!! $svgFallback !!}';">
                     </div>
                     
                     {{-- Conteúdo e Legenda --}}
                     <div class="card-body" style="padding: 15px;">
                         
                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #222; line-height: 1.5;">
-                            <strong>{{ $usuario->nome_usuario ?? 'usuario' }}</strong> 
+                            <strong>{{ $usernameAutor }}</strong> 
                             @if(!empty($pub->legenda))
                                 {!! nl2br(e($pub->legenda)) !!}
                             @else
