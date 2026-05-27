@@ -33,13 +33,16 @@
                     $urlBanco = trim($pubArray['url_imagem'] ?? '');
                     $idPost = $pubArray['id'] ?? 0;
 
-                    // LÓGICA LOCAL ANTI-BLOQUEIO SSL
-                    // Se o link vier vazio, nulo ou apontar para domínios externos problemáticos, interceptamos aqui
+                    // Criamos SVGs dinâmicos embutidos em Base64 para garantir que NUNCA dê 404 ou erro de SSL
+                    $svgPlaceholder1 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'><rect width='100%' height='100%' fill='%23667eea'/><text x='50%' y='50%' font-family='sans-serif' font-size='24' fill='white' font-weight='bold' text-anchor='middle'>InstaClass • Espaço de Estudos</text></svg>";
+                    $svgPlaceholder2 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'><rect width='100%' height='100%' fill='%23764ba2'/><text x='50%' y='50%' font-family='sans-serif' font-size='24' fill='white' font-weight='bold' text-anchor='middle'>Foco nos Códigos! 💻</text></svg>";
+
+                    // Validação robusta para intercetar campos vazios ou domínios bloqueados na rede
                     if (empty($urlBanco) || $urlBanco === 'null' || str_contains($urlBanco, 'unsplash.com') || str_contains($urlBanco, 'picsum.photos')) {
-                        if ($idPost == 1) {
-                            $imagem = asset('placeholder1.jpg'); // Puxa do seu public/placeholder1.jpg
+                        if ($idPost % 2 == 0) {
+                            $imagem = $svgPlaceholder1;
                         } else {
-                            $imagem = asset('placeholder2.jpg'); // Puxa do seu public/placeholder2.jpg
+                            $imagem = $svgPlaceholder2;
                         }
                     } else {
                         $imagem = $urlBanco;
@@ -48,7 +51,7 @@
 
                 <div class="card-post" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid #eef0f2;">
                     
-                    {{-- Cabeçalho do Post (Dono do Conteúdo) --}}
+                    {{-- Cabeçalho do Post --}}
                     <div class="post-header" style="display: flex; align-items: center; justify-content: space-between; padding: 15px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div class="post-avatar" style="width: 40px; height: 40px; background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; color: white; font-weight: bold;">
@@ -64,7 +67,7 @@
                             </div>
                         </div>
 
-                        {{-- Botão de Denúncia com o Interceptador JavaScript --}}
+                        {{-- Botão de Denúncia --}}
                         <button type="button" onclick="abrirModalDenuncia({{ $pubArray['id'] ?? 0 }})" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 6px;">
                             ⚠️ Denunciar
                         </button>
@@ -72,16 +75,15 @@
                     
                     {{-- Mídia do Post --}}
                     <div style="background: #fcfcfc; width: 100%; text-align: center; min-height: 250px; display: flex; align-items: center; justify-content: center;">
-                        {{-- O "this.src" dentro do onerror aponta estritamente para o arquivo interno do projeto --}}
-                        <img src="{{ $imagem }}" 
+                        {{-- O onerror agora aponta para um fallback em string SVG inline seguro --}}
+                        <img src="{!! $imagem !!}" 
                              style="width: 100%; max-height: 500px; object-fit: cover; display: block; margin: 0 auto;"
-                             onerror="this.onerror=null; this.src='{{ asset('placeholder1.jpg') }}';">
+                             onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'600\' height=\'400\'><rect width=\'100%\' height=\'100%\' fill=\'%23667eea\'/><text x=\'50%\' y=\'50%\' fill=\'white\' text-anchor=\'middle\' font-weight=\'bold\'>InstaClass</text></svg>';">
                     </div>
                     
                     {{-- Ações e Legenda --}}
                     <div class="card-body" style="padding: 15px;">
                         
-                        {{-- Botão de Curtir com Efeito Coração Vermelho/Vazio --}}
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                             <a href="{{ url('/publicacoes/' . ($pubArray['id'] ?? 0) . '/curtir') }}" style="text-decoration: none; font-size: 22px; display: inline-block;">
                                 @if(!empty($pubArray['ja_curtiu']))
