@@ -29,22 +29,20 @@
         <div class="feed-lista" style="display: flex; flex-direction: column; gap: 30px;">
             @foreach ($publicacoes as $pub)
                 @php 
-                    // 1. Força a conversão para array para evitar erros de tipagem
                     $pubArray = (array) $pub;
-                    
-                    // 2. Obtém a URL gravada
-                    $urlBanco = $pubArray['url_imagem'] ?? '';
-                    
-                    // 3. Ignora links do Unsplash bloqueados ou strings corrompidas e injeta imagens limpas do Picsum
-                    if (empty($urlBanco) || $urlBanco === 'null' || str_contains($urlBanco, 'unsplash.com')) {
-                        // Se o ID da publicação for 1 (Mariana), carrega uma imagem de tecnologia, se for 2 (Carlos) outra
-                        if (($pubArray['id'] ?? 0) == 1) {
-                            $imagem = 'https://picsum.photos/id/1/600/500'; // Foto de laptop/estudos
+                    $urlBanco = trim($pubArray['url_imagem'] ?? '');
+                    $idPost = $pubArray['id'] ?? 0;
+
+                    // LÓGICA LOCAL ANTI-BLOQUEIO SSL
+                    // Se o link vier vazio, nulo ou apontar para domínios externos problemáticos, interceptamos aqui
+                    if (empty($urlBanco) || $urlBanco === 'null' || str_contains($urlBanco, 'unsplash.com') || str_contains($urlBanco, 'picsum.photos')) {
+                        if ($idPost == 1) {
+                            $imagem = asset('placeholder1.jpg'); // Puxa do seu public/placeholder1.jpg
                         } else {
-                            $imagem = 'https://picsum.photos/id/180/600/500'; // Outra foto de notebook
+                            $imagem = asset('placeholder2.jpg'); // Puxa do seu public/placeholder2.jpg
                         }
                     } else {
-                        $imagem = trim($urlBanco);
+                        $imagem = $urlBanco;
                     }
                 @endphp
 
@@ -74,10 +72,10 @@
                     
                     {{-- Mídia do Post --}}
                     <div style="background: #fcfcfc; width: 100%; text-align: center; min-height: 250px; display: flex; align-items: center; justify-content: center;">
-                        {{-- Fallback via Javascript aponta para o Picsum caso ocorra qualquer outro erro de rede --}}
+                        {{-- O "this.src" dentro do onerror aponta estritamente para o arquivo interno do projeto --}}
                         <img src="{{ $imagem }}" 
                              style="width: 100%; max-height: 500px; object-fit: cover; display: block; margin: 0 auto;"
-                             onerror="this.onerror=null; this.src='https://picsum.photos/600/500';">
+                             onerror="this.onerror=null; this.src='{{ asset('placeholder1.jpg') }}';">
                     </div>
                     
                     {{-- Ações e Legenda --}}
@@ -119,11 +117,9 @@
         <h3 style="margin-top: 0; color: #333; font-size: 18px; display: flex; align-items: center; gap: 8px;">⚠️ Denunciar Publicação</h3>
         <p style="color: #666; font-size: 13px; margin-bottom: 20px; line-height: 1.4;">Por favor, selecione o motivo real para que nossa equipe administrativa analise este conteúdo.</p>
         
-        {{-- Formulário Dinâmico --}}
         <form id="formDenuncia" method="POST" action="">
             @csrf
             
-            {{-- Campo Seleção de Motivo --}}
             <label style="display: block; font-weight: bold; font-size: 13px; color: #444; margin-bottom: 8px;">Motivo da Denúncia:</label>
             <select name="motivo" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px; background: #fafafa; cursor: pointer;">
                 <option value="Conteúdo impróprio">🔞 Conteúdo impróprio / Nudez / Pornografia</option>
@@ -133,7 +129,6 @@
                 <option value="Propriedade intelectual">📝 Direitos autorais de terceiros</option>
             </select>
 
-            {{-- Campo Seleção de Gravidade --}}
             <label style="display: block; font-weight: bold; font-size: 13px; color: #444; margin-bottom: 8px;">Gravidade Estimada:</label>
             <select name="gravidade" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 25px; background: #fafafa; cursor: pointer;">
                 <option value="baixa">🟢 Baixa (Apenas revisão de rotina)</option>
@@ -141,7 +136,6 @@
                 <option value="alta">🔴 Alta (Conteúdo criminoso / Bloqueio imediato)</option>
             </select>
 
-            {{-- Botões Inferiores --}}
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button type="button" onclick="fecharModalDenuncia()" style="background: #e0e0e0; color: #333; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">
                     Cancelar
@@ -154,7 +148,6 @@
     </div>
 </div>
 
-{{-- Script Nativo de Controle do Modal --}}
 <script>
 function abrirModalDenuncia(publicacaoId) {
     const modal = document.getElementById('modalDenuncia');
