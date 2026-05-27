@@ -29,16 +29,20 @@
         <div class="feed-lista" style="display: flex; flex-direction: column; gap: 30px;">
             @foreach ($publicacoes as $pub)
                 @php 
-                    // 1. Força a conversão para array para evitar erros caso o Laravel retorne objetos stdClass brutos
+                    // 1. Força a conversão para array para evitar erros de tipagem
                     $pubArray = (array) $pub;
                     
-                    // 2. Obtém a URL do array de forma segura
-                    $urlBanco = $pubArray['url_imagem'] ?? null;
+                    // 2. Obtém a URL gravada
+                    $urlBanco = $pubArray['url_imagem'] ?? '';
                     
-                    // 3. Fallback definitivo se o link for nulo, string 'null', ou não for um link HTTP válido
-                    if (empty($urlBanco) || $urlBanco === 'null' || !str_starts_with(trim($urlBanco), 'http')) {
-                        // Imagem padrão caso o Controller não tenha enviado a coluna url_imagem
-                        $imagem = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60';
+                    // 3. Ignora links do Unsplash bloqueados ou strings corrompidas e injeta imagens limpas do Picsum
+                    if (empty($urlBanco) || $urlBanco === 'null' || str_contains($urlBanco, 'unsplash.com')) {
+                        // Se o ID da publicação for 1 (Mariana), carrega uma imagem de tecnologia, se for 2 (Carlos) outra
+                        if (($pubArray['id'] ?? 0) == 1) {
+                            $imagem = 'https://picsum.photos/id/1/600/500'; // Foto de laptop/estudos
+                        } else {
+                            $imagem = 'https://picsum.photos/id/180/600/500'; // Outra foto de notebook
+                        }
                     } else {
                         $imagem = trim($urlBanco);
                     }
@@ -70,10 +74,10 @@
                     
                     {{-- Mídia do Post --}}
                     <div style="background: #fcfcfc; width: 100%; text-align: center; min-height: 250px; display: flex; align-items: center; justify-content: center;">
-                        {{-- O atributo onerror garante que se o navegador falhar ao baixar o link, uma imagem alternativa será carregada --}}
+                        {{-- Fallback via Javascript aponta para o Picsum caso ocorra qualquer outro erro de rede --}}
                         <img src="{{ $imagem }}" 
                              style="width: 100%; max-height: 500px; object-fit: cover; display: block; margin: 0 auto;"
-                             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60';">
+                             onerror="this.onerror=null; this.src='https://picsum.photos/600/500';">
                     </div>
                     
                     {{-- Ações e Legenda --}}
@@ -156,10 +160,7 @@ function abrirModalDenuncia(publicacaoId) {
     const modal = document.getElementById('modalDenuncia');
     const form = document.getElementById('formDenuncia');
     
-    // Injeta a rota de envio correta apontando para o ID do post clicado
     form.action = "{{ url('/publicacoes') }}/" + publicacaoId + "/denunciar";
-    
-    // Abre a janela flutuante usando flex para centralizar perfeitamente
     modal.style.display = 'flex';
 }
 
