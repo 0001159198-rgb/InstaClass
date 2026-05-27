@@ -29,10 +29,19 @@
         <div class="feed-lista" style="display: flex; flex-direction: column; gap: 30px;">
             @foreach ($publicacoes as $pub)
                 @php 
-                    // Fallback automático se a URL da imagem falhar ou vier em branco
-                    $imagem = (!empty($pub->url_imagem) && $pub->url_imagem !== 'null') 
-                        ? $pub->url_imagem 
-                        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
+                    // 1. Força a conversão para array para evitar erros caso o Laravel retorne objetos stdClass brutos
+                    $pubArray = (array) $pub;
+                    
+                    // 2. Obtém a URL do array de forma segura
+                    $urlBanco = $pubArray['url_imagem'] ?? null;
+                    
+                    // 3. Fallback definitivo se o link for nulo, string 'null', ou não for um link HTTP válido
+                    if (empty($urlBanco) || $urlBanco === 'null' || !str_starts_with(trim($urlBanco), 'http')) {
+                        // Imagem padrão caso o Controller não tenha enviado a coluna url_imagem
+                        $imagem = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60';
+                    } else {
+                        $imagem = trim($urlBanco);
+                    }
                 @endphp
 
                 <div class="card-post" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid #eef0f2;">
@@ -41,28 +50,30 @@
                     <div class="post-header" style="display: flex; align-items: center; justify-content: space-between; padding: 15px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div class="post-avatar" style="width: 40px; height: 40px; background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; color: white; font-weight: bold;">
-                                {{ strtoupper(substr($pub->autor_nome ?? 'U', 0, 1)) }}
+                                {{ strtoupper(substr($pubArray['autor_nome'] ?? 'U', 0, 1)) }}
                             </div>
                             <div class="post-info" style="display: flex; flex-direction: column;">
-                                <a href="{{ url('/perfil/' . $pub->usuario_id) }}" style="color: #333; font-weight: bold; text-decoration: none; font-size: 14px;">
-                                    {{ $pub->autor_nome ?? 'Usuário' }}
+                                <a href="{{ url('/perfil/' . ($pubArray['usuario_id'] ?? '')) }}" style="color: #333; font-weight: bold; text-decoration: none; font-size: 14px;">
+                                    {{ $pubArray['autor_nome'] ?? 'Usuário' }}
                                 </a>
-                                {{-- CORRIGIDO: Isolado o caractere @ para o Blade compilar a variável --}}
                                 <span style="color: #888; font-size: 11px;">
-                                    <span>@</span>{{ $pub->autor_username ?? 'usuario' }} • {{ date('d/m/Y H:i', strtotime($pub->created_at ?? 'now')) }}
+                                    <span>@</span>{{ $pubArray['autor_username'] ?? 'usuario' }} • {{ date('d/m/Y H:i', strtotime($pubArray['created_at'] ?? $pubArray['criado_em'] ?? 'now')) }}
                                 </span>
                             </div>
                         </div>
 
                         {{-- Botão de Denúncia com o Interceptador JavaScript --}}
-                        <button type="button" onclick="abrirModalDenuncia({{ $pub->id }})" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 6px;">
+                        <button type="button" onclick="abrirModalDenuncia({{ $pubArray['id'] ?? 0 }})" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 6px;">
                             ⚠️ Denunciar
                         </button>
                     </div>
                     
                     {{-- Mídia do Post --}}
-                    <div style="background: #fcfcfc; width: 100%; text-align: center;">
-                        <img src="{{ $imagem }}" style="width: 100%; max-height: 500px; object-fit: cover; display: block; margin: 0 auto;">
+                    <div style="background: #fcfcfc; width: 100%; text-align: center; min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                        {{-- O atributo onerror garante que se o navegador falhar ao baixar o link, uma imagem alternativa será carregada --}}
+                        <img src="{{ $imagem }}" 
+                             style="width: 100%; max-height: 500px; object-fit: cover; display: block; margin: 0 auto;"
+                             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60';">
                     </div>
                     
                     {{-- Ações e Legenda --}}
@@ -70,8 +81,8 @@
                         
                         {{-- Botão de Curtir com Efeito Coração Vermelho/Vazio --}}
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                            <a href="{{ url('/publicacoes/' . $pub->id . '/curtir') }}" style="text-decoration: none; font-size: 22px; display: inline-block;">
-                                @if($pub->ja_curtiu)
+                            <a href="{{ url('/publicacoes/' . ($pubArray['id'] ?? 0) . '/curtir') }}" style="text-decoration: none; font-size: 22px; display: inline-block;">
+                                @if(!empty($pubArray['ja_curtiu']))
                                     ❤️ <span style="font-size: 14px; color: #333; font-weight: bold; vertical-align: middle;">Curtido</span>
                                 @else
                                     🤍 <span style="font-size: 14px; color: #666; vertical-align: middle;">Curtir</span>
@@ -79,13 +90,12 @@
                             </a>
 
                             <span style="color: #777; font-size: 13px; font-weight: 500;">
-                                👥 {{ $pub->total_curtidas ?? 0 }} {{ ($pub->total_curtidas ?? 0) == 1 ? 'curtida' : 'curtidas' }}
+                                👥 {{ $pubArray['total_curtidas'] ?? 0 }} {{ ($pubArray['total_curtidas'] ?? 0) == 1 ? 'curtida' : 'curtidas' }}
                             </span>
                         </div>
 
-                        {{-- CORRIGIDO: Removido o arroba daqui para renderizar o username dinamicamente --}}
                         <p style="margin: 0; font-size: 14px; color: #222; line-height: 1.5;">
-                            <strong>{{ $pub->autor_username ?? 'usuario' }}</strong> {!! nl2br(e($pub->legenda ?? '')) !!}
+                            <strong>{{ $pubArray['autor_username'] ?? 'usuario' }}</strong> {!! nl2br(e($pubArray['legenda'] ?? '')) !!}
                         </p>
                     </div>
 
@@ -158,7 +168,6 @@ function fecharModalDenuncia() {
     modal.style.display = 'none';
 }
 
-// Fecha se o usuário clicar na área cinza de fundo
 window.onclick = function(event) {
     const modal = document.getElementById('modalDenuncia');
     if (event.target == modal) {
