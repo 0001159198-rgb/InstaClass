@@ -5,6 +5,7 @@
         <h2>🔎 Buscar Publicações e Perfis</h2>
     </div>
     
+    {{-- 🔥 CORREÇÃO: Enviando para a rota correta do formulário --}}
     <form method="GET" action="{{ url('/buscar') }}" class="search-form">
         <input type="text" 
                name="q" 
@@ -63,7 +64,6 @@
                             <a href="{{ url('/perfil/' . $perfil['id']) }}" class="perfil-nome">
                                 {{ $perfil['nome'] }}
                             </a>
-                            {{-- 🔥 CORREÇÃO: Isolado o @ para o blade processar a variável --}}
                             <div class="perfil-username">
                                 <span>@</span>{{ $perfil['nome_usuario'] ?? 'usuario' }}
                             </div>
@@ -92,7 +92,6 @@
                                 <a href="{{ url('/perfil/' . $pub['usuario_id']) }}" class="post-nome" style="font-weight: bold; color: #262626; text-decoration: none;">
                                     {{ $pub['autor_nome'] ?? 'Usuário' }}
                                 </a>
-                                {{-- 🔥 CORREÇÃO: Removido o arroba grudado e ajustado para 'autor_username' que vem da query --}}
                                 <div class="post-usuario" style="font-size: 13px; color: #8e8e8e;">
                                     <span>@</span>{{ $pub['autor_username'] ?? $pub['nome_usuario'] ?? 'usuario' }}
                                 </div>
@@ -125,37 +124,63 @@
 </div>
 
 <style>
-/* Seus estilos originais perfeitamente preservados */
 .busca-container {
     max-width: 600px;
     margin: 0 auto;
     padding: 20px;
     box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 .busca-header {
     margin-bottom: 20px;
 }
+.busca-header h2 {
+    font-size: 22px;
+    color: #262626;
+    margin: 0;
+}
+
+/* 🔥 REVISÃO DO CONTAINER DE BUSCA */
 .search-form {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
+    width: 100%;
+    align-items: center;
 }
 .search-input {
-    flex: 1;
-    padding: 10px 15px;
+    flex: 1; /* Faz a barra ocupar todo o espaço restante horizontalmente */
+    min-width: 0; /* Previne bugs de estouro de largura no flexbox */
+    padding: 11px 15px;
     border: 1px solid #dbdbdb;
     border-radius: 8px;
     font-size: 14px;
+    background: #fafafa;
+    outline: none;
+    transition: all 0.2s ease;
+}
+.search-input:focus {
+    background: #white;
+    border-color: #a8a8a8;
 }
 .search-button {
-    padding: 10px 20px;
+    flex-shrink: 0; /* IMPEDE o botão de esticar ou encolher */
+    width: 110px; /* Mantém uma largura fixa ideal para o botão */
+    padding: 11px 0;
     background: #0095f6;
     color: white;
     border: none;
     border-radius: 8px;
     font-weight: 600;
+    font-size: 14px;
     cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
 }
+.search-button:hover {
+    background: #1877f2;
+}
+
 .result-info {
     margin-bottom: 20px;
     color: #262626;
@@ -183,7 +208,7 @@
     margin-bottom: 30px;
 }
 .result-section h3 {
-    font-size: 18px;
+    font-size: 16px;
     color: #262626;
     margin-bottom: 15px;
     padding-bottom: 10px;
@@ -201,25 +226,25 @@
     transition: box-shadow 0.2s;
 }
 .perfil-result:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 .perfil-avatar-mini {
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 44px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
 }
 .perfil-info {
     flex: 1;
 }
 .perfil-nome {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     color: #262626;
     text-decoration: none;
@@ -230,25 +255,25 @@
 .perfil-username {
     font-size: 13px;
     color: #8e8e8e;
-    margin-top: 3px;
+    margin-top: 2px;
 }
 .perfil-stats {
     font-size: 12px;
     color: #b3b3b3;
-    margin-top: 3px;
+    margin-top: 2px;
 }
 .btn-visitar {
-    padding: 8px 16px;
-    background: #0095f6;
-    color: white;
+    padding: 6px 14px;
+    background: #efefef;
+    color: #262626;
     border-radius: 8px;
     text-decoration: none;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     transition: background 0.2s;
 }
 .btn-visitar:hover {
-    background: #0077cc;
+    background: #dbdbdb;
 }
 </style>
 
